@@ -1,0 +1,11 @@
+---
+description: Galaxy Cube project rules
+alwaysApply: true
+---
+- GALAXY_CUBE.md is the spec. Follow it; if something in it must change, update GALAXY_CUBE.md in the same change.
+- Target: Raspberry Pi Zero 2 W, Raspberry Pi OS Lite 64-bit (Bookworm), Python 3.11, one asyncio process (cube/main.py).
+- The website API (galaxymc.us /api/cube/*) already exists and is live. Do not invent new endpoints; use the ones in §7 and §8.
+- Never log or print the device token. Store it only in /var/lib/galaxy-cube/token (chmod 600).
+- Keep code simple and readable. The owner is not a programmer: explain what to wire, run and test in plain words.
+- Everything must run without a keyboard or monitor (screen + knob + buttons + phone setup page only).
+- Hardware access (GPIO, I2C, I2S) must have a fake/simulator mode so the code can run and be tested on a normal computer.
