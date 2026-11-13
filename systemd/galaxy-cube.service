@@ -1,0 +1,18 @@
+[Unit]
+Description=Galaxy Cube (console join + voice chat)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/galaxy-cube
+ExecStart=/usr/bin/python3 -m cube.main
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+# State (token, settings) lives here — never log the token.
+Environment=GALAXY_CUBE_STATE=/var/lib/galaxy-cube
+Environment=GALAXY_CUBE_PHANTOM=/opt/galaxy-cube/phantom-linux-arm8
+
+[Install]
+WantedBy=multi-user.target
