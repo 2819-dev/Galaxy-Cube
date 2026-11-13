@@ -8,8 +8,9 @@ set -euo pipefail
 REPO_DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 INSTALL_DIR="/opt/galaxy-cube"
 STATE_DIR="/var/lib/galaxy-cube"
-PHANTOM_VERSION="${PHANTOM_VERSION:-0.5.4}"
-PHANTOM_URL="https://github.com/jhead/phantom/releases/download/v${PHANTOM_VERSION}/phantom-linux-arm8"
+BC_VERSION="${BEDROCKCONNECT_VERSION:-1.72.1}"
+BC_JAR_URL="https://github.com/Pugmatt/BedrockConnect/releases/download/${BC_VERSION}/BedrockConnect-1.0-SNAPSHOT.jar"
+BC_DIR="${INSTALL_DIR}/bedrock-connect"
 SERVICE_SRC="${REPO_DIR}/systemd/galaxy-cube.service"
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -35,7 +36,10 @@ apt-get install -y \
   ca-certificates \
   i2c-tools \
   libportaudio2 \
-  network-manager
+  network-manager \
+  dnsmasq \
+  openjdk-17-jre-headless \
+  rsync
 
 echo "==> Enable I2C (and remind about I2S in config.txt)"
 if command -v raspi-config >/dev/null 2>&1; then
@@ -62,9 +66,12 @@ rsync -a --delete \
 echo "==> Python packages (system / break-system-packages for Lite)"
 python3 -m pip install --break-system-packages -r "${INSTALL_DIR}/requirements.txt"
 
-echo "==> Download Phantom (ARM64) ${PHANTOM_VERSION}"
-curl -fsSL -o "${INSTALL_DIR}/phantom-linux-arm8" "${PHANTOM_URL}"
-chmod +x "${INSTALL_DIR}/phantom-linux-arm8"
+echo "==> Download BedrockConnect ${BC_VERSION} (Minecraft 26.60 / NetherNet)"
+# Phantom is RakNet-only and does not work with Bedrock 26.60+.
+mkdir -p "${BC_DIR}"
+curl -fsSL -o "${BC_DIR}/BedrockConnect-1.0-SNAPSHOT.jar" "${BC_JAR_URL}"
+# Remove old Phantom binary if present from earlier installs
+rm -f "${INSTALL_DIR}/phantom-linux-arm8"
 
 echo "==> State directory ${STATE_DIR}"
 mkdir -p "${STATE_DIR}"
@@ -83,3 +90,6 @@ echo "  Service:  systemctl status galaxy-cube"
 echo "  Logs:     journalctl -u galaxy-cube -f"
 echo "  OLED:     i2cdetect -y 1   (should show 3c)"
 echo "  Reboot once if this was the first time enabling I2C/I2S."
+echo
+echo "  First boot: if there is no Wi-Fi, the Cube makes hotspot CUBE-XXXX"
+echo "  (password galaxycube). Join it on your phone and open the setup page."

@@ -5,6 +5,7 @@ GalaxySMP voice chat. Raspberry Pi Zero 2 W, a 128×64 OLED, a rotary knob and t
 
 - **Full build guide:** [GALAXY_CUBE.md](GALAXY_CUBE.md) (parts, wiring, software, website API, case, manual)
 - Link a Cube: **galaxymc.us/cube**
+- Console join uses **BedrockConnect 1.72+** (Minecraft **26.60** / NetherNet). Phantom is not used.
 
 ## Run the screen simulator on your computer
 
@@ -15,8 +16,16 @@ cd galaxy-cube
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python3 -m cube.main --sim
+python3 -m cube.main --sim --skip-wifi
 ```
+
+To also try the **Wi-Fi setup page** on your PC:
+
+```bash
+python3 -m cube.main --sim --force-wifi-setup --wifi-timeout 0
+```
+
+Then open the URL it prints (usually http://127.0.0.1:8765/), pick a fake network, and connect.
 
 **Keys**
 
@@ -27,8 +36,6 @@ python3 -m cube.main --sim
 | T (hold) | TALK |
 | M | MUTE |
 | Esc or Q | Quit |
-
-You should see a short star animation, then **Galaxy Cube**, then the home screen. Press Enter to open the menu.
 
 ## Flash the SD card and run on the Pi
 
@@ -42,12 +49,21 @@ You should see a short star animation, then **Galaxy Cube**, then the home scree
 ```bash
 sudo apt-get update
 sudo apt-get install -y git
-git clone https://github.com/<your-repo>/galaxy-cube.git
-cd galaxy-cube
+git clone https://github.com/2819-dev/Galaxy-Cube.git
+cd Galaxy-Cube
 sudo bash setup/install.sh
 ```
 
-That installs Python packages, downloads **Phantom** for ARM64, and starts the `galaxy-cube` systemd service.
+That installs Python packages, **Java 17**, **BedrockConnect**, and starts the `galaxy-cube` service.
+
+### First-time Wi-Fi (no keyboard needed)
+
+1. If the Cube has no Wi-Fi within ~20 seconds, the screen says **Wi-Fi setup**.
+2. On your phone, join Wi-Fi **CUBE-XXXX** (password `galaxycube`).
+3. A page should open (or go to http://10.42.0.1/). Pick your home Wi-Fi and type the password.
+4. The Cube joins home Wi-Fi. Next comes pairing (later section).
+
+**Settings → Wi-Fi** on the knob menu starts this again.
 
 **Wire the screen and knob** (BCM pins — see GALAXY_CUBE.md §3):
 

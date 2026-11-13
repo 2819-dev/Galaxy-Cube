@@ -29,6 +29,10 @@ class UiState:
     screen_timeout: bool = True
     message: Optional[str] = None
     message_until: float = 0.0
+    # home | wifi_setup | wifi_connecting
+    mode: str = "home"
+    wifi_ssid: Optional[str] = None
+    portal_url: str = "http://10.42.0.1/"
 
 
 @dataclass
@@ -97,7 +101,6 @@ COMING_SOON = {
     "account_status",
     "account_unlink",
     "account_pair",
-    "settings_wifi",
     "settings_brightness",
     "settings_timeout",
 }
@@ -109,10 +112,17 @@ class UI:
     ROW_H = 10
     VISIBLE_ROWS = 5
 
-    def __init__(self, screen: Screen, inp: Input, state: Optional[UiState] = None) -> None:
+    def __init__(
+        self,
+        screen: Screen,
+        inp: Input,
+        state: Optional[UiState] = None,
+        on_action: Optional[Callable[[str], None]] = None,
+    ) -> None:
         self.screen = screen
         self.inp = inp
         self.state = state or UiState()
+        self.on_action = on_action
         self.root = build_menu()
         self.stack: list[tuple[list[MenuItem], int]] = []  # (items, selected)
         self.in_menu = False
@@ -123,6 +133,7 @@ class UI:
         self._flash_until = 0.0
         self._about = False
         self.running = True
+        self._wifi_page = 0
 
     def visible_items(self, items: list[MenuItem]) -> list[MenuItem]:
         out = []
@@ -182,6 +193,12 @@ class UI:
             self._show_flash("Deafen — Coming soon")
             return
 
+        # Wi-Fi setup screens: knob only flips help pages
+        if self.state.mode in ("wifi_setup", "wifi_connecting"):
+            if ev in (Event.TURN_CW, Event.TURN_CCW, Event.CLICK):
+                self._wifi_page = (self._wifi_page + 1) % 2
+            return
+
         if self._flash and time.monotonic() < self._flash_until:
             if ev == Event.CLICK:
                 self._flash = None
@@ -229,6 +246,11 @@ class UI:
         if action == "settings_about":
             self._about = True
             return
+        if action == "settings_wifi":
+            self.close_menu()
+            if self.on_action:
+                self.on_action("settings_wifi")
+            return
         if action in COMING_SOON:
             self._show_flash("Coming soon")
             return
@@ -249,6 +271,15 @@ class UI:
             self.screen.show()
             return
         self._flash = None
+
+        if self.state.mode == "wifi_setup":
+            self._draw_wifi_setup()
+            self.screen.show()
+            return
+        if self.state.mode == "wifi_connecting":
+            self._draw_wifi_connecting()
+            self.screen.show()
+            return
 
         if self._about:
             self._draw_about()
@@ -279,6 +310,34 @@ class UI:
         self.screen.text(2, 28, s.device_id)
         self.screen.text(2, 40, f"IP {s.ip}")
         self.screen.text(2, 52, "Press = back")
+
+    def _draw_wifi_setup(self) -> None:
+        s = self.state
+        self.screen.clear()
+        self.screen.text(2, 2, "Wi-Fi setup")
+        self.screen.line((0, 11, 127, 11))
+        if self._wifi_page == 0:
+            self.screen.text(2, 16, "On your phone join")
+            self.screen.text(2, 28, s.device_id)
+            self.screen.text(2, 40, "password:")
+            self.screen.text(2, 52, "galaxycube")
+        else:
+            self.screen.text(2, 16, "Then open")
+            # Shorten URL for the tiny screen
+            url = s.portal_url.replace("http://", "")
+            if len(url) > 20:
+                url = url[:19] + "…"
+            self.screen.text(2, 30, url)
+            self.screen.text(2, 46, "Pick home Wi-Fi")
+
+    def _draw_wifi_connecting(self) -> None:
+        s = self.state
+        self.screen.clear()
+        self.screen.text_centered(18, "Connecting…")
+        name = s.wifi_ssid or "Wi-Fi"
+        if len(name) > 18:
+            name = name[:17] + "…"
+        self.screen.text_centered(36, name)
 
     def _draw_home(self) -> None:
         s = self.state

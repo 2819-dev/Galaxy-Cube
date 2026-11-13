@@ -23,10 +23,20 @@ STATE_DIR = Path(os.environ.get("GALAXY_CUBE_STATE", str(
 TOKEN_PATH = STATE_DIR / "token"
 SETTINGS_PATH = STATE_DIR / "settings.json"
 
-# Phantom binary (installed by setup/install.sh on the Pi)
+# BedrockConnect (Minecraft 26.60+ / NetherNet). Phantom no longer works.
+_INSTALL_ROOT = Path(os.environ.get("GALAXY_CUBE_HOME", "/opt/galaxy-cube"))
+BEDROCK_CONNECT_DIR = Path(os.environ.get(
+    "GALAXY_CUBE_BC_DIR",
+    str(_INSTALL_ROOT / "bedrock-connect"),
+))
+BEDROCK_CONNECT_JAR = Path(os.environ.get(
+    "GALAXY_CUBE_BC_JAR",
+    str(BEDROCK_CONNECT_DIR / "BedrockConnect-1.0-SNAPSHOT.jar"),
+))
+# Kept for older docs/scripts; unused at runtime.
 PHANTOM_PATH = Path(os.environ.get(
     "GALAXY_CUBE_PHANTOM",
-    "/opt/galaxy-cube/phantom-linux-arm8",
+    str(_INSTALL_ROOT / "phantom-linux-arm8"),
 ))
 
 SCREEN_WIDTH = 128
