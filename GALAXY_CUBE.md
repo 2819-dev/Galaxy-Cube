@@ -38,10 +38,11 @@ the server knows where the owner's Minecraft player is.
 
 ---
 
-## 2. Parts list (no soldering, ≈ $45)
+## 2. Parts list (built-in mic + speaker, no soldering, ≈ $55)
 
-Everything here plugs together with jumper wires. When buying, check the listing says the pins are
-**already soldered** ("pre-soldered", "with header").
+Everything plugs together with jumper wires; the speaker's two wires go into a screw terminal. When buying,
+check each board's listing says **pre-soldered** / **header soldered** (and for the amp: **with terminal block
+soldered**). If a photo shows the pins lying loose next to the board, it needs soldering: skip that one.
 
 | Part | Search for | Approx. price |
 |---|---|---|
@@ -49,68 +50,76 @@ Everything here plugs together with jumper wires. When buying, check the listing
 | microSD card, 16 GB or bigger | "SanDisk 16GB A1 microSD" | $5 |
 | Power supply, 5 V 2.5 A, micro-USB | "Raspberry Pi micro USB power supply" | $6–8 |
 | 1.3" OLED 128×64, I2C, SH1106, 4 pins soldered | "1.3 inch OLED I2C SH1106" | $4–6 |
-| Rotary encoder board with push | "KY-040 rotary encoder" (+ knob cap if not included) | $2 |
-| Knob cap, 6 mm D-shaft, 20–25 mm wide | "6mm D shaft knob" | $1 |
+| Rotary encoder board with push | "KY-040 rotary encoder" | $2 |
+| Knob cap, 6 mm D-shaft, 20–25 mm wide (if not included) | "6mm D shaft knob" | $1 |
 | 2 × button boards with 3 pins (TALK, MUTE) | "KY-004 button module" | $2 |
-| USB headset adapter with mic + headphone jacks | "USB sound card CM108" | $4–6 |
-| Micro-USB OTG adapter | "micro USB OTG adapter" | $1–2 |
+| **Microphone board**, pins soldered | "INMP441 I2S microphone pre-soldered" | $4–6 |
+| **Speaker amplifier board**, pins + screw terminal soldered | "MAX98357A I2S amplifier pre-soldered" | $5–8 |
+| **Speaker**, 28 mm, 8 Ω, 0.5–1 W, with wires attached | "28mm 8 ohm speaker with wire" | $2 |
 | Mini breadboard, 170 holes | "mini breadboard 170" | $1–2 |
-| Jumper wires, 20 cm: female-female **and** male-female | "dupont jumper wires 40 pin" (one pack of each) | $3–4 |
+| Jumper wires, 20 cm: female-female **and** male-female | "dupont jumper wires 40 pin" (one pack each) | $3–4 |
 | Screws: 4 × M2.5 × 8 + 4 × M2.5 × 5 | "M2.5 screw kit" | $2–5 |
 | Double-sided foam tape | | $1–2 |
 | 3D-printed case (~80 g dark PLA + a little clear PLA/PETG) | files in `case/` | $2 |
-| A headset with a 3.5 mm plug (most phone headsets work) | | (you probably have one) |
+| *Optional:* USB headset adapter + micro-USB OTG adapter | "USB sound card CM108", "micro USB OTG adapter" | $5–8 |
 
-Voice uses the headset. The Cube finds the USB headset adapter by itself (Audio: Auto).
+The optional headset adapter is for private voice chat: plug it in (with a headset) and the Cube uses it;
+unplug it and the Cube uses its own mic and speaker (Audio: Auto).
 
-**Want sound without a headset?** Either plug a **USB speakerphone** (a small conference speaker with a
-mic, ~$20–30) into the OTG adapter instead of the headset adapter; the Cube uses it the same way. Or, if
-someone can solder: add an INMP441 I2S mic, a MAX98357A amp and a 28 mm 8 Ω speaker (~$9, wiring in §3).
+**If you can't find pre-soldered mic/amp boards:** use a plug-in **USB microphone** (the tiny "mini USB mic"
+dongles) and a small **USB speaker** instead, with a **micro-USB OTG hub** to plug both in. The Cube uses them
+by itself. They're bulkier and don't fit the speaker ring in the base, so tape them inside.
 
 ---
 
 ## 3. Wiring (no soldering)
 
-Pin numbers are the Pi's physical pin numbers (pin 1 is the corner pin next to the SD card side, marked with
-a square pad). The breadboard shares power: the Pi only has two 3.3 V pins, and four boards need power.
+Pin numbers are the Pi's physical pin numbers. Pin 1 is at the end of the header nearest the SD card slot,
+and it's the pin with a **square** solder pad on the back of the board. Odd pins (1, 3, 5 …) are on the row
+toward the middle of the board, even pins (2, 4, 6 …) on the row along the board's edge.
 
-**Power through the breadboard** (male-female wires):
-1. Pi **pin 1 (3.3V)** → breadboard column A. Pi **pin 6 (GND)** → breadboard column B.
-2. Every board's **VCC / +** goes into column A, every board's **GND / −** into column B.
+Wires into the breadboard need a **male** end (male-female wires); wires from a board straight to the Pi are
+female-female.
 
-**Signals** (female-female wires, straight from the board to the Pi):
+**3.3 V for four boards through the breadboard** (the Pi only has two 3.3 V pins):
+Pi **pin 1** → one row of the breadboard (male-female wire). Then the screen's **VCC**, the knob's **+** and
+both button boards' **+** each go into that same row.
+
+Everything else goes straight from the board to the Pi with female-female wires:
 
 | Board | Pin on board | Pi pin |
 |---|---|---|
-| Screen (OLED) | SDA / SCL | pin 3 / pin 5 |
-| Knob (KY-040) | CLK / DT / SW | pin 11 / pin 13 / pin 15 |
-| TALK button board | S (signal) | pin 29 |
-| MUTE button board | S (signal) | pin 31 |
-| USB headset adapter | — | the Pi's **USB** port (the middle one, not PWR) through the OTG adapter |
+| Screen (OLED) | GND / SDA / SCL | 6 / 3 / 5 |
+| Knob (KY-040) | GND / CLK / DT / SW | 9 / 11 / 13 / 15 |
+| TALK button board | − / S | 25 / 29 |
+| MUTE button board | − / S | 30 / 31 |
+| Microphone (INMP441) | VDD / GND / L/R / SD | 17 / 14 / 20 / 38 |
+| Microphone (INMP441) | SCK / WS | breadboard row C / row D (see below) |
+| Amplifier (MAX98357A) | VIN / GND / DIN | 2 / 34 / 40 |
+| Amplifier (MAX98357A) | BCLK / LRC | breadboard row C / row D (see below) |
+| Speaker | its two wires | the amp's screw terminal: red → +, black → − |
 
-Button boards are made two different ways (some give LOW when pressed, some HIGH). The Cube checks
-which kind it has when it starts, so **don't hold a button while plugging the Cube in**.
+The mic and the amp share two signals, and each Pi pin only takes one wire, so they meet on the breadboard:
+Pi **pin 12** → row C, and the mic's **SCK** and the amp's **BCLK** into row C. Pi **pin 35** → row D, and the
+mic's **WS** and the amp's **LRC** into row D. Leave the amp's **SD** and **GAIN** pins empty.
 
-**Mounting:** stick the two button boards under the TALK and MUTE holes with foam tape, after dropping a
-printed `button_cap.stl` into each hole from inside. The breadboard can be taped to a side wall.
+Button boards are made two ways (some give LOW when pressed, some HIGH). The Cube checks which kind it has
+when it starts, so **don't hold a button while plugging the Cube in**.
 
-**Optional soldered sound** (built-in mic + speaker instead of a headset):
+**Mounting:** drop a printed `button_cap.stl` into each top hole from inside, then tape the button boards
+under them. The speaker sits in the ring on the base (face down, over the grille holes); tape the amp next to
+it. Tape the mic board behind the 3 × 3 mic holes on the front, with its little hole facing them.
 
-| Part | Pin on part | Pi pin |
-|---|---|---|
-| I2S bus (mic + amp share it) | BCLK / LRCLK (WS) | pin 12 / pin 35 |
-| INMP441 mic | SD / L/R / VDD / GND | pin 38 / GND / 3.3V / GND |
-| MAX98357A amp | DIN / VIN / GND / SD | pin 40 / 5V (pin 2) / GND / not connected |
-
-`setup/install.sh` turns on I2C and I2S in `/boot/firmware/config.txt`:
+`setup/install.sh` turns on the screen (I2C) and the mic + amp (I2S) in `/boot/firmware/config.txt`:
 
 ```
 dtparam=i2c_arm=on
 dtparam=i2s=on
-dtoverlay=googlevoicehat-soundcard   # only used by the soldered mic + amp
+dtoverlay=googlevoicehat-soundcard
 ```
 
-**Done when:** `sudo bash setup/check.sh` says the screen and the USB headset adapter are found.
+**Done when:** `sudo bash setup/check.sh` says the screen and the built-in speaker/mic are found, and
+Menu → Voice Chat → Join voice, then holding TALK, is heard on the website's voice page.
 
 ---
 

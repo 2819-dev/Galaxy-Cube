@@ -27,7 +27,7 @@ It hasn't run on a real Pi yet: that's the next step.
 
 ## Build one
 
-No soldering needed. Parts list: GALAXY_CUBE.md §2.
+No soldering needed, with a built-in mic and speaker. Parts list: GALAXY_CUBE.md §2.
 
 1. **Print** `case/shell.stl`, `case/base.stl` and 2 × `case/button_cap.stl` in dark PLA, and
    `case/light_strip.stl` in clear PLA.

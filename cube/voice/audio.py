@@ -18,21 +18,33 @@ GATE = 0.012                # built-in mic: quieter than this counts as silence 
 
 
 def find_devices(choice):
-    """Return (input, output, kind) for "Auto" / "Headset" / "Speaker". kind is "headset" or "speaker"."""
+    """Return (mic, speaker, kind) for "Auto" / "Headset" / "Speaker".
+
+    Built-in = the I2S mic + amp inside the Cube. USB = a headset adapter, or a plug-in USB mic and USB
+    speaker (they can be two different devices). Auto uses USB when something USB is plugged in.
+    kind is "headset" (no echo worries) or "speaker" (noise gate on, push-to-talk recommended).
+    """
     if config.FAKE:
         return None, None, "headset" if choice == "Headset" else "speaker"
     import sounddevice as sd
-    usb = builtin = None
+    usb_in = usb_out = builtin = None
     for i, d in enumerate(sd.query_devices()):
         name = d["name"].lower()
-        if "usb" in name and d["max_input_channels"] and d["max_output_channels"]:
-            usb = usb if usb is not None else i
+        if "usb" in name:
+            if d["max_input_channels"] and usb_in is None:
+                usb_in = i
+            if d["max_output_channels"] and usb_out is None:
+                usb_out = i
         elif ("voicehat" in name or "i2s" in name or "googlevoice" in name) and builtin is None:
             builtin = i
-    if choice == "Headset" or (choice == "Auto" and usb is not None):
-        if usb is not None:
-            return usb, usb, "headset"
-    return builtin, builtin, "speaker"
+    use_usb = choice == "Headset" or (choice == "Auto" and (usb_in is not None or usb_out is not None))
+    if choice == "Speaker" or not use_usb:
+        return builtin, builtin, "speaker"
+    mic = usb_in if usb_in is not None else builtin
+    out = usb_out if usb_out is not None else builtin
+    # one USB device with both jacks = a headset adapter; anything else can echo like a speaker
+    kind = "headset" if mic == out and mic is not None else "speaker"
+    return mic, out, kind
 
 
 class Audio:
