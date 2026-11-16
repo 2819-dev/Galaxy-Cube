@@ -52,7 +52,10 @@ the server knows where the owner's Minecraft player is.
 | USB headset adapter (CM108 "USB sound card" with mic + headphone jacks, or a TRRS 4-pole one) | | $4 |
 | Micro-USB OTG adapter (for the USB sound card) | | $1 |
 | Power: 5 V 2.5 A micro-USB supply | | $6 |
-| Wires, screws, 3D-printed body (~60 g PLA) | | $2–3 |
+| Knob cap for the encoder (6 mm D-shaft, 20–25 mm wide) | | $1 |
+| Screws: 4 × M2.5 × 8 (base) + 4 × M2.5 × 5 (Pi) | | $1 |
+| Female-to-female jumper wires (20 cm, a 40-pack) | | $2 |
+| 3D-printed body (~80 g dark PLA + a little clear PLA/PETG) | | $2 |
 | **Total** | | **≈ $45–50** |
 
 **Ways to make it cheaper**
@@ -319,7 +322,7 @@ The printable files are made by `case/make_case.py` (change a measurement at the
   The Pi sits on 4 posts on the base (M2.5 × 5 screws), its ports facing the back.
 - Front: window for the OLED (30 × 15.5 mm, with a 1 mm bezel and a pocket behind it for the module), knob
   hole (7.4 mm, the encoder's nut holds it), 3 × 3 mic holes bottom right.
-- Top: TALK (12.6 mm hole) and MUTE (8.6 mm hole), slot for the light strip.
+- Top: TALK and MUTE (12.6 mm holes for 12 mm tactile buttons with round caps), slot for the light strip.
 - Back: one opening for the Pi's USB port (headset adapter) and power port.
 - Base: ring for the 28 mm speaker with grille holes, 4 feet so the sound gets out.
 - Print shell and base upside down / flat with no supports except the screen pocket (or use "supports on build

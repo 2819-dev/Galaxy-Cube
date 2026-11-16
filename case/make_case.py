@@ -36,7 +36,7 @@ KNOB_HOLE = 7.4
 KNOB_Z = 21.0
 # Buttons on top: 12 mm tactile switches with round caps
 TALK_HOLE = 12.6
-MUTE_HOLE = 8.6
+MUTE_HOLE = 12.6                # same button and cap as TALK (common 12 mm caps are ~12 mm wide)
 # Pi Zero 2 W: 65 x 30 board, M2.5 holes 3.5 mm from each edge
 PI = (65.0, 30.0)
 PI_HOLES = [(3.5, 3.5), (61.5, 3.5), (3.5, 26.5), (61.5, 26.5)]
