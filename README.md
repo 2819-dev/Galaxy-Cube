@@ -38,6 +38,13 @@ sudo reboot
 
 To get updates later: `sudo bash setup/update.sh`
 
+## Try it on your phone
+
+`simulator/` is a phone app that acts like the Cube: the screen, a knob you turn with your finger,
+TALK and MUTE, plus pretend versions of the setup page, galaxymc.us/cube, a console and voice chat.
+Open `simulator/index.html` from any web host and use **Share → Add to Home Screen** to install it.
+It doesn't talk to the real website or a real console.
+
 ## Try it on a computer (no Pi needed)
 
 ```bash

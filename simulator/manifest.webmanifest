@@ -1,0 +1,14 @@
+{
+  "name": "Galaxy Cube Simulator",
+  "short_name": "Galaxy Cube",
+  "description": "Try the Galaxy Cube on your phone: screen, knob, TALK and MUTE.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d1c",
+  "theme_color": "#0a0d1c",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
