@@ -4,7 +4,7 @@ The Galaxy Cube is a small 3D-printed box that lets **Xbox, Nintendo Switch and 
 join the GalaxySMP Minecraft Bedrock server and use **GalaxySMP voice chat**. It has a small screen and a
 rotary knob (turn to scroll, press to select), plus two buttons for voice chat.
 
-This file is the complete spec. Open this repo in Cursor and build it section by section (each section ends
+This file is the complete spec. Open this repo in Claude Code and build it section by section (each section ends
 with what "done" means). The website side (pairing, accounts, voice server) **already exists and is live**
 on galaxymc.us; this repo is only the Cube itself.
 
@@ -289,7 +289,7 @@ Screen dims after 60 s idle and turns off after 5 min (OLEDs burn in); any input
 
 ## 12. Things the owner does once (not code)
 
-1. Create this GitHub repo and open it in Cursor.
+1. Create this GitHub repo and open it in Claude Code (it reads `CLAUDE.md` automatically).
 2. **cube.galaxymc.us**: in the Cloudflare dashboard → Workers & Pages → *galaxysmp* → Settings →
    Domains & Routes → **Add → Custom domain** → `cube.galaxymc.us`. The website already sends that address
    to galaxymc.us/cube.
