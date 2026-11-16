@@ -8,35 +8,63 @@ from .. import config
 
 log = config.log
 
-PAGE = """<!doctype html><html><head><meta charset="utf-8">
+PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Galaxy Cube setup</title>
 <style>
-:root{{--bg:#0b1026;--card:#141b3d;--text:#e8ecff;--muted:#9aa3c7;--grad:linear-gradient(90deg,#22d3ee,#3b82f6,#8b5cf6)}}
-*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,sans-serif;padding:20px}}
-.wrap{{max-width:420px;margin:0 auto}}h1{{font-size:26px;margin:8px 0 4px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}}
-p{{color:var(--muted);margin:0 0 18px}}.card{{background:var(--card);border-radius:12px;padding:16px;margin-bottom:14px}}
-label{{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #222b55;cursor:pointer}}
-label:last-child{{border:0}}input[type=radio]{{margin-right:10px}}.sig{{color:var(--muted);font-size:13px}}
-input[type=password],input[type=text]{{width:100%;padding:12px;border-radius:8px;border:1px solid #2a3570;background:#0b1026;color:var(--text);font-size:16px;margin-top:8px}}
-button{{width:100%;padding:14px;border:0;border-radius:10px;background:var(--grad);color:#fff;font-size:17px;font-weight:600;margin-top:6px}}
-.err{{background:#3b1530;color:#ffb4c8;padding:12px;border-radius:8px;margin-bottom:14px}}a{{color:#7dd3fc}}
-</style></head><body><div class="wrap">
-<h1>Galaxy Cube</h1><p>Pick your home Wi-Fi. Your console must use the same Wi-Fi.</p>{body}</div></body></html>"""
+:root{{--bg:#0b1026;--card:#121936;--line:#222c57;--text:#e8ecff;--muted:#97a0c6;--cyan:#22d3ee;--blue:#3b82f6;--purple:#8b5cf6;--bad:#ffb4c8}}
+*{{box-sizing:border-box}}
+body{{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}}
+.brand{{height:4px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--purple))}}
+.wrap{{max-width:440px;margin:0 auto;padding:22px 18px 40px}}
+.mark{{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.14em;font-size:13px;color:var(--muted)}}
+.mark i{{width:14px;height:14px;border:2px solid var(--cyan);border-radius:3px;display:block}}
+h1{{font-size:24px;margin:18px 0 6px;font-weight:650}}
+p{{color:var(--muted);margin:0 0 18px}}
+fieldset{{border:1px solid var(--line);border-radius:10px;padding:0;margin:0 0 14px;background:var(--card)}}
+legend{{padding:0 6px;margin-left:10px;color:var(--muted);font-size:13px}}
+label.net{{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;border-top:1px solid var(--line);cursor:pointer}}
+label.net:first-of-type{{border-top:0}}
+label.net input{{accent-color:var(--cyan);margin:0 10px 0 0;width:18px;height:18px}}
+.name{{display:flex;align-items:center;min-width:0;overflow-wrap:anywhere}}
+.sig{{color:var(--muted);font-size:13px;white-space:nowrap;display:flex;gap:6px;align-items:center}}
+.bars{{display:inline-flex;gap:2px;align-items:flex-end;height:12px}}.bars b{{width:3px;background:var(--line);border-radius:1px}}.bars b.on{{background:var(--cyan)}}
+.field{{padding:12px 14px}}.field+.field{{border-top:1px solid var(--line)}}
+.field label{{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}}
+input[type=password],input[type=text]{{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}}
+input:focus,button:focus{{outline:2px solid var(--cyan);outline-offset:2px}}
+button{{width:100%;padding:14px;border:0;border-radius:10px;background:var(--cyan);color:#06202a;font-size:17px;font-weight:650}}
+.err{{border:1px solid #6b2442;background:#2a1026;color:var(--bad);padding:12px;border-radius:8px;margin-bottom:14px}}
+.small{{font-size:14px;margin-top:14px}}
+</style></head><body><div class="brand"></div><div class="wrap">
+<div class="mark"><i></i>GALAXY CUBE</div>{body}</div></body></html>"""
+
+LOCK = ('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '
+        'aria-label="Password"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>')
+
+
+def _bars(signal):
+    on = 1 + min(3, signal // 25)
+    return '<span class="bars">' + "".join(
+        f'<b class="{"on" if i < on else ""}" style="height:{3 + i * 3}px"></b>' for i in range(4)) + "</span>"
 
 
 def _network_form(networks, error):
     rows = "".join(
-        f'<label><span><input type="radio" name="ssid" value="{html.escape(n["ssid"])}"{" checked" if i == 0 else ""}>'
-        f'{html.escape(n["ssid"])}</span><span class="sig">{"🔒 " if n["secure"] else ""}{n["signal"]}%</span></label>'
+        f'<label class="net"><span class="name"><input type="radio" name="ssid" value="{html.escape(n["ssid"])}"'
+        f'{" checked" if i == 0 else ""}>{html.escape(n["ssid"])}</span>'
+        f'<span class="sig">{LOCK if n["secure"] else ""}{_bars(n["signal"])}</span></label>'
         for i, n in enumerate(networks))
     if not rows:
-        rows = "<p>No networks found. Type the name below.</p>"
+        rows = '<div class="field">No networks found. Type the name below.</div>'
     err = f'<div class="err">{html.escape(error)}</div>' if error else ""
-    return (f'{err}<form method="post" action="/connect"><div class="card">{rows}</div>'
-            '<div class="card">Other network (optional)<input type="text" name="other" placeholder="Wi-Fi name">'
-            '<br><br>Password<input type="password" name="password" placeholder="Wi-Fi password"></div>'
+    return (f'<h1>Connect to Wi-Fi</h1><p>Pick your home Wi-Fi. Your console has to be on the same one.</p>{err}'
+            f'<form method="post" action="/connect"><fieldset><legend>Networks nearby</legend>{rows}</fieldset>'
+            '<fieldset><div class="field"><label for="other">Not listed? Type its name</label>'
+            '<input type="text" id="other" name="other" autocomplete="off" placeholder="Wi-Fi name"></div>'
+            '<div class="field"><label for="password">Password</label>'
+            '<input type="password" id="password" name="password" placeholder="Wi-Fi password"></div></fieldset>'
             '<button type="submit">Connect</button></form>'
-            '<p style="margin-top:14px">Don\'t see your Wi-Fi? Type its name under "Other network".</p>')
+            '<p class="small">This page only saves Wi-Fi. You link your account later with a code.</p>')
 
 
 class Portal:
@@ -60,8 +88,8 @@ class Portal:
             raise web.HTTPFound("/")
         if not self.chosen.done():
             self.chosen.set_result((ssid, form.get("password") or ""))
-        body = ('<div class="card"><b>Connecting…</b><br><br>Look at the Cube\'s screen. '
-                'If it says the password was wrong, join the CUBE Wi-Fi again and this page will come back.</div>')
+        body = ('<h1>Connecting…</h1><p>Look at the Cube\'s screen. If it says the password was wrong, '
+                'join the CUBE Wi-Fi again and this page comes back.</p>')
         return web.Response(text=PAGE.format(body=body), content_type="text/html")
 
     async def anything_else(self, request):
