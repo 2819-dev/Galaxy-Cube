@@ -1,28 +1,37 @@
 # Galaxy Cube
 
 A small 3D-printed box that lets Xbox, Nintendo Switch and PlayStation players join **GalaxySMP** and use
-GalaxySMP voice chat. Raspberry Pi Zero 2 W, a 128×64 OLED, a rotary knob and two voice buttons.
+GalaxySMP voice chat. Raspberry Pi Zero 2 W, a 128×64 screen, a knob and two buttons (TALK, MUTE).
 
-- **Full build guide:** [GALAXY_CUBE.md](GALAXY_CUBE.md) (parts, wiring, software, website API, case, manual)
+![The case](case/preview.png)
+
+- **Full build guide:** [GALAXY_CUBE.md](GALAXY_CUBE.md) (parts, wiring, software, website, case, manual)
 - Link a Cube: **galaxymc.us/cube**
 
-## What works so far
+## What's done
 
 | Part | Status |
 |---|---|
-| Boot screen, home screen, menus, settings (§9) | ✅ |
-| Wi-Fi setup from a phone (§6) | ✅ |
-| Linking to galaxymc.us with a code (§7) | ✅ |
-| Console joining / Server Broadcast (§5) | ✅ |
-| Install + auto-start on the Pi (§10) | ✅ |
-| Voice chat (§8) | next |
-| 3D-printed case files (§13) | later |
+| Screen, knob, menus, settings | ✅ |
+| Wi-Fi setup from a phone | ✅ |
+| Linking to galaxymc.us with a code | ✅ |
+| Consoles join through the Cube (Server Broadcast) | ✅ |
+| Voice chat: TALK, MUTE, groups, nearby volume, headset or speaker | ✅ |
+| 3D-printed case (`case/`) | ✅ |
+| Install, auto-start, update, hardware check | ✅ |
+| Phone simulator (`simulator/`) | ✅ |
+| Galaxy Cube Lite (ESP32, no voice) | later |
 
-## Put it on the Cube
+Everything is tested on a computer in "fake mode" with a pretend website (16 checks, `dev/drive.py`).
+It hasn't run on a real Pi yet: that's the next step.
 
-1. Flash **Raspberry Pi OS Lite (64-bit)** to the SD card with Raspberry Pi Imager (turn on SSH there).
-2. Wire it up as in GALAXY_CUBE.md §3, put the SD card in and power it on.
-3. Connect to it (`ssh pi@raspberrypi.local`) and run:
+## Build one
+
+1. **Print** `case/shell.stl` and `case/base.stl` in dark PLA, and `case/light_strip.stl` in clear PLA.
+2. **Wire** the parts as in GALAXY_CUBE.md §3.
+3. **SD card:** flash **Raspberry Pi OS Lite (64-bit)** with Raspberry Pi Imager. In its settings, turn on SSH
+   and type your Wi-Fi (only needed for this first install).
+4. **Install:** connect to the Pi (`ssh pi@raspberrypi.local`) and run these three, one at a time:
 
 ```bash
 git clone https://github.com/2819-dev/Galaxy-Cube.git galaxy-cube
@@ -36,30 +45,39 @@ cd galaxy-cube && sudo bash setup/install.sh
 sudo reboot
 ```
 
-To get updates later: `sudo bash setup/update.sh`
+5. **Check:** the screen shows the Galaxy Cube logo. If something's missing, run `sudo bash setup/check.sh`.
+   It says in plain words what's OK and what to fix.
+
+Updates later: `sudo bash setup/update.sh`
 
 ## Try it on your phone
 
-`simulator/` is a phone app that acts like the Cube: the screen, a knob you turn with your finger,
-TALK and MUTE, plus pretend versions of the setup page, galaxymc.us/cube, a console and voice chat.
-Open `simulator/index.html` from any web host and use **Share → Add to Home Screen** to install it.
-It doesn't talk to the real website or a real console.
+`simulator/` is a phone app that acts like the Cube: the screen, a knob you turn with your finger, TALK and
+MUTE, plus pretend versions of the setup page, galaxymc.us/cube, a console and voice chat. Host the folder
+anywhere (for example GitHub Pages) and use **Share → Add to Home Screen**. It doesn't talk to the real website.
 
-## Try it on a computer (no Pi needed)
+## Try it on a computer
 
 ```bash
-pip install aiohttp pillow qrcode
+pip install aiohttp pillow qrcode numpy aiortc
 ```
 
 ```bash
 python3 dev/mock_site.py
 ```
 
-In a second window:
+In a second window, either play with it yourself:
 
 ```bash
-CUBE_FAKE=1 CUBE_API=http://localhost:8099 python3 -m cube.main
+CUBE_FAKE=1 CUBE_STUN= CUBE_API=http://localhost:8099 python3 -m cube.main
 ```
 
-The screen is printed as text (and saved as `screen.png`). Type `u`/`d` + Enter to turn the knob,
-just Enter to press it, `q` to quit. Open http://localhost:8099/dev/link to "link" the Cube.
+or run the full check:
+
+```bash
+python3 dev/drive.py
+```
+
+The screen is printed as text (and saved as `screen.png`). Type `u`/`d` + Enter to turn the knob, just Enter
+to press it, `h` to hold/let go of TALK, `m` for MUTE, `q` to quit. Open http://localhost:8099/dev/link to
+"link" the Cube.

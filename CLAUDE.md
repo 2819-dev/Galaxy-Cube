@@ -59,6 +59,9 @@ so the code can be run and tested here in Claude Code without a Pi.
 - In fake mode, use a temp folder instead of `/var/lib/galaxy-cube/`.
 
 Test every change in fake mode before saying it's done. Then tell the owner what to try on the real Cube.
+`dev/mock_site.py` is a pretend galaxymc.us (including voice), and `python3 dev/drive.py` runs the full check
+against it by reading the fake screen and turning the knob like a person would.
+The phone simulator (`simulator/app.html`) mirrors `cube/main.py`: when menus or screens change, change both.
 
 ## The website (already live, don't change it from here)
 

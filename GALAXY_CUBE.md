@@ -9,7 +9,9 @@ with what "done" means). The website side (pairing, accounts, voice server) **al
 on galaxymc.us; this repo is only the Cube itself.
 
 - Version 1 (this guide): **Galaxy Cube** — Raspberry Pi Zero 2 W. Console joining + voice chat.
-- Later: **Galaxy Cube Lite** — ESP32-S3, console joining only (see the last section).
+- Later: **Galaxy Cube Lite** — ESP32-S3, console joining only (see §11).
+
+**Status:** §3–§10 and §13 are built and tested in fake mode (`python3 dev/drive.py`). §11 (Lite) is for later.
 
 ---
 
@@ -200,9 +202,11 @@ Owners manage Cubes at **galaxymc.us/cube** (rename, unlink, online status).
 
 ### Controls
 - **TALK** (hold) = push-to-talk. **MUTE** (press) = mute/unmute mic. Long-press MUTE = deafen.
-- Menu **Voice Chat** → *Join voice / Leave voice*, *Mode: Push-to-talk / Open mic*, *Groups* (list, join,
-  leave), *Audio: Auto / Headset / Speaker*, *Volume*.
-- Home screen shows a small mic icon (talking / muted / off) and the group name.
+- Menu **Voice Chat** → *Join voice / Leave voice*, *Mode: Push-to-talk / Open mic*, *Group* (join / leave),
+  *Global Mic* (only for people who have it), *Who's here*, *Audio: Auto / Headset / Speaker*, *Volume* (20–100 %).
+- Groups are **made on the website**; the Cube joins and leaves them. A group with a password can only be
+  joined from the Cube if its owner invited you (there's no keyboard to type a password).
+- Home screen shows a small mic icon (talking / muted / deafened / off) and the group name.
 
 ### Connection
 WebSocket `wss://galaxymc.us/api/cube/voice` with header `Authorization: Bearer <deviceToken>`.
@@ -229,8 +233,9 @@ Cube → server requests (`{ "type": …, "req": n, … }`):
 2. `rtc.session`, then create an offer → `rtc.push { sdp, mid }` → set the `answer`.
 3. Whenever the roster changes: pull everyone you can hear (same group, Global Mic, or in game nearby —
    the server checks, so just ask for everyone who is `published` and not you), close tracks of people who left.
-4. Volume per person = proximity: `1 - distance / 48` (0 if farther or other dimension), using `pos`; group
-   members and Global Mic are full volume. Mix all received tracks to the output device.
+4. Volume per person = proximity, with the website's curve (`distanceMix` in voice.js): full volume within
+   4 blocks, fading smoothly to silence at the range (48), 0 in another dimension. Group members and Global Mic
+   are full volume. Mix all received tracks to the output device.
 5. PTT: keep the track published; send silence (or disable the track) when TALK isn't held, and send
    `state { talking }` on press/release so others see the talking icon in game.
 
@@ -248,11 +253,14 @@ Cube → server requests (`{ "type": …, "req": n, … }`):
 
 Boot: animated star burst → **"Galaxy Cube"** wordmark (1 s) → status.
 
-Home screen (rotating every few seconds if idle):
+Home screen (each row has a 7×7 pixel icon; the same icons are in the phone simulator):
 ```
- GALAXY CUBE        ◉ Wi-Fi
- Broadcast: ON  ● 3 online
- Voice: Steve  🎤  Group: —
+ Steve                  (·) ≋     ← account name; broadcast + Wi-Fi icons
+ ─────────────────────────────
+ (·) Broadcasting
+ 🎤  Builders - hold TALK          ← or Talking / Mic off / Deafened / Voice off
+ ●   Online
+                        MENU >
 ```
 
 Menu (turn = move, press = select, "◂ Back" item at the top of each list):
@@ -303,10 +311,20 @@ Menu labels are shortened ("Xbox Broadcast", not "Xbox Server Broadcast") so the
 
 ## 13. Case (3D print) notes
 
-- ~70 × 70 × 70 mm cube, rounded corners (r = 8 mm), two parts: shell + base plate (4 × M2.5 screws into Pi standoffs).
-- Front: window for the OLED (bezel 1 mm), knob below it. Top: TALK (big) and MUTE (small) buttons.
-- Side: 3.5 mm/USB headset opening, micro-USB power opening. Grille holes for mic (front) and speaker (bottom, with feet).
-- Print in dark PLA with a translucent purple/cyan "galaxy" strip or top for style; optional: an addressable LED
+The printable files are made by `case/make_case.py` (change a measurement at the top and run it again):
+`case/shell.stl`, `case/base.stl`, `case/light_strip.stl`, and `case/preview.png`.
+
+- 70 × 70 × 70 mm cube, rounded top and side edges (r = 8 mm), flat bottom. Shell ≈ 62 g, base ≈ 16 g PLA.
+- Base plate slides into the bottom and is held by 4 × M2.5 × 8 screws from below into posts in the corners.
+  The Pi sits on 4 posts on the base (M2.5 × 5 screws), its ports facing the back.
+- Front: window for the OLED (30 × 15.5 mm, with a 1 mm bezel and a pocket behind it for the module), knob
+  hole (7.4 mm, the encoder's nut holds it), 3 × 3 mic holes bottom right.
+- Top: TALK (12.6 mm hole) and MUTE (8.6 mm hole), slot for the light strip.
+- Back: one opening for the Pi's USB port (headset adapter) and power port.
+- Base: ring for the 28 mm speaker with grille holes, 4 feet so the sound gets out.
+- Print shell and base upside down / flat with no supports except the screen pocket (or use "supports on build
+  plate only"). 0.2 mm layers, 3 walls, 15 % infill.
+- Print the shell in dark PLA and `light_strip.stl` in clear/translucent PLA or PETG; optional: an addressable LED
   behind it that glows when broadcasting/talking (extra $1, GPIO12).
 
 ---
