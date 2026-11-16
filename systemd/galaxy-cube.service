@@ -1,0 +1,15 @@
+[Unit]
+Description=Galaxy Cube
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=simple
+WorkingDirectory=@DIR@
+ExecStart=/opt/galaxy-cube/venv/bin/python3 -m cube.main
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

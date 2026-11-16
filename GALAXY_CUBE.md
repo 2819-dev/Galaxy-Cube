@@ -115,6 +115,8 @@ galaxy-cube/
     voice/audio.py        ← picks headset / built-in, mixing, volume
   systemd/galaxy-cube.service
   setup/install.sh        ← installs packages, Phantom, service
+  setup/update.sh         ← git pull + restart
+  dev/mock_site.py        ← pretend galaxymc.us for testing on a computer
   case/                   ← STL / 3MF files for the body
 ```
 
@@ -255,15 +257,17 @@ Home screen (rotating every few seconds if idle):
 
 Menu (turn = move, press = select, "◂ Back" item at the top of each list):
 ```
-▸ Xbox Server Broadcast
-▸ Nintendo Server Broadcast
-▸ PlayStation Server Broadcast
+▸ Xbox Broadcast
+▸ Nintendo Broadcast
+▸ PlayStation Broadcast
 ▸ Stop Broadcast            (only while broadcasting)
 ▸ Voice Chat ▸ Join / Leave · Push-to-talk / Open mic · Groups · Audio · Volume
 ▸ Account ▸ Linked to Steve · Unlink this Cube · Pair again
 ▸ Settings ▸ Wi-Fi · Brightness · Screen timeout · About (version, CUBE-XXXX, IP)
 ```
 Screen dims after 60 s idle and turns off after 5 min (OLEDs burn in); any input wakes it.
+The screen-off time can be changed in Settings (1 / 5 / 10 min / Never).
+Menu labels are shortened ("Xbox Broadcast", not "Xbox Server Broadcast") so they fit the 128-px screen.
 
 ---
 
