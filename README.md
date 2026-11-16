@@ -27,8 +27,11 @@ It hasn't run on a real Pi yet: that's the next step.
 
 ## Build one
 
-1. **Print** `case/shell.stl` and `case/base.stl` in dark PLA, and `case/light_strip.stl` in clear PLA.
-2. **Wire** the parts as in GALAXY_CUBE.md §3.
+No soldering needed. Parts list: GALAXY_CUBE.md §2.
+
+1. **Print** `case/shell.stl`, `case/base.stl` and 2 × `case/button_cap.stl` in dark PLA, and
+   `case/light_strip.stl` in clear PLA.
+2. **Wire** the parts with jumper wires as in GALAXY_CUBE.md §3.
 3. **SD card:** flash **Raspberry Pi OS Lite (64-bit)** with Raspberry Pi Imager. In its settings, turn on SSH
    and type your Wi-Fi (only needed for this first install).
 4. **Install:** connect to the Pi (`ssh pi@raspberrypi.local`) and run these three, one at a time:

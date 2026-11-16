@@ -3,7 +3,7 @@
     pip install manifold3d trimesh numpy pillow
     python3 case/make_case.py
 
-Writes case/shell.stl, case/base.stl, case/light_strip.stl and case/preview.png.
+Writes case/shell.stl, case/base.stl, case/light_strip.stl, case/button_cap.stl (print 2) and case/preview.png.
 All sizes are in millimetres. Change a number below and run it again.
 
 Layout (looking at the front):
@@ -166,6 +166,15 @@ def make_strip():
     return strip + lip
 
 
+def make_button_cap():
+    """TALK and MUTE caps (print 2). They drop into the top holes from inside; the wide ring stops them
+    falling out, and the small peg underneath presses the button on the button board."""
+    cap = Manifold.cylinder(WALL + 2.0, TALK_HOLE / 2 - 0.4, circular_segments=SEG).translate((0, 0, 1.2))
+    ring = Manifold.cylinder(1.2, TALK_HOLE / 2 + 2.0, circular_segments=SEG)
+    peg = Manifold.cylinder(1.5, 1.8, circular_segments=SEG).translate((0, 0, -1.5))
+    return cap + ring + peg
+
+
 def save(m, name):
     mesh = m.to_mesh()
     tm = trimesh.Trimesh(vertices=np.asarray(mesh.vert_properties)[:, :3], faces=np.asarray(mesh.tri_verts))
@@ -225,9 +234,10 @@ def preview(meshes, path):
 
 
 if __name__ == "__main__":
-    shell, base, strip = make_shell(), make_base(), make_strip()
-    meshes = [save(shell, "shell.stl"), save(base, "base.stl"), save(strip, "light_strip.stl")]
-    for name, tm in zip(("shell", "base", "light_strip"), meshes):
+    shell, base, strip, cap = make_shell(), make_base(), make_strip(), make_button_cap()
+    meshes = [save(shell, "shell.stl"), save(base, "base.stl"), save(strip, "light_strip.stl"),
+              save(cap, "button_cap.stl")]
+    for name, tm in zip(("shell", "base", "light_strip", "button_cap"), meshes):
         print(f"{name}.stl  {tm.extents.round(1)} mm  {tm.volume / 1000 * 1.24:.0f} g PLA  watertight={tm.is_watertight}")
     try:
         preview(meshes, HERE / "preview.png")

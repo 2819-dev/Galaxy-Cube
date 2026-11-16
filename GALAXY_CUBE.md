@@ -38,58 +38,79 @@ the server knows where the owner's Minecraft player is.
 
 ---
 
-## 2. Parts list (target ≤ $50)
+## 2. Parts list (no soldering, ≈ $45)
 
-| Part | Example | Approx. price |
+Everything here plugs together with jumper wires. When buying, check the listing says the pins are
+**already soldered** ("pre-soldered", "with header").
+
+| Part | Search for | Approx. price |
 |---|---|---|
-| Raspberry Pi Zero 2 W (with header) | Pi Zero 2 WH | $15–18 |
-| microSD card 16 GB (A1) | SanDisk 16 GB | $5 |
-| 1.3" OLED 128×64, I2C (SH1106) — or 0.96" SSD1306 | | $4 (0.96" is $3) |
-| Rotary encoder with push (KY-040 or bare EC11) | | $1–2 |
-| 2 × 12 mm tactile buttons (TALK, MUTE) | | $0.50 |
-| I2S microphone INMP441 | | $3 |
-| I2S amplifier MAX98357A + 28 mm 8 Ω speaker | | $4 + $1.50 |
-| USB headset adapter (CM108 "USB sound card" with mic + headphone jacks, or a TRRS 4-pole one) | | $4 |
-| Micro-USB OTG adapter (for the USB sound card) | | $1 |
-| Power: 5 V 2.5 A micro-USB supply | | $6 |
-| Knob cap for the encoder (6 mm D-shaft, 20–25 mm wide) | | $1 |
-| Screws: 4 × M2.5 × 8 (base) + 4 × M2.5 × 5 (Pi) | | $1 |
-| Female-to-female jumper wires (20 cm, a 40-pack) | | $2 |
-| 3D-printed body (~80 g dark PLA + a little clear PLA/PETG) | | $2 |
-| **Total** | | **≈ $45–50** |
+| Raspberry Pi Zero 2 W **with header** | "Raspberry Pi Zero 2 WH" | $15–18 |
+| microSD card, 16 GB or bigger | "SanDisk 16GB A1 microSD" | $5 |
+| Power supply, 5 V 2.5 A, micro-USB | "Raspberry Pi micro USB power supply" | $6–8 |
+| 1.3" OLED 128×64, I2C, SH1106, 4 pins soldered | "1.3 inch OLED I2C SH1106" | $4–6 |
+| Rotary encoder board with push | "KY-040 rotary encoder" (+ knob cap if not included) | $2 |
+| Knob cap, 6 mm D-shaft, 20–25 mm wide | "6mm D shaft knob" | $1 |
+| 2 × button boards with 3 pins (TALK, MUTE) | "KY-004 button module" | $2 |
+| USB headset adapter with mic + headphone jacks | "USB sound card CM108" | $4–6 |
+| Micro-USB OTG adapter | "micro USB OTG adapter" | $1–2 |
+| Mini breadboard, 170 holes | "mini breadboard 170" | $1–2 |
+| Jumper wires, 20 cm: female-female **and** male-female | "dupont jumper wires 40 pin" (one pack of each) | $3–4 |
+| Screws: 4 × M2.5 × 8 + 4 × M2.5 × 5 | "M2.5 screw kit" | $2–5 |
+| Double-sided foam tape | | $1–2 |
+| 3D-printed case (~80 g dark PLA + a little clear PLA/PETG) | files in `case/` | $2 |
+| A headset with a 3.5 mm plug (most phone headsets work) | | (you probably have one) |
 
-**Ways to make it cheaper**
-- **Headset only** (drop the I2S mic + amp + speaker): −$8.5 → ≈ $38.
-- **0.96" OLED** instead of 1.3": −$1.
-- Buy the Pi Zero 2 W **without** header and solder pins: −$2.
-- Ship without a power supply ("use any phone charger"): −$6 → ≈ $32 with headset-only.
-- The **Lite** (ESP32-S3, no voice) is ≈ $15–20 in parts (§11).
+Voice uses the headset. The Cube finds the USB headset adapter by itself (Audio: Auto).
+
+**Want sound without a headset?** Either plug a **USB speakerphone** (a small conference speaker with a
+mic, ~$20–30) into the OTG adapter instead of the headset adapter; the Cube uses it the same way. Or, if
+someone can solder: add an INMP441 I2S mic, a MAX98357A amp and a 28 mm 8 Ω speaker (~$9, wiring in §3).
 
 ---
 
-## 3. Wiring (Pi Zero 2 W, BCM pin numbers)
+## 3. Wiring (no soldering)
+
+Pin numbers are the Pi's physical pin numbers (pin 1 is the corner pin next to the SD card side, marked with
+a square pad). The breadboard shares power: the Pi only has two 3.3 V pins, and four boards need power.
+
+**Power through the breadboard** (male-female wires):
+1. Pi **pin 1 (3.3V)** → breadboard column A. Pi **pin 6 (GND)** → breadboard column B.
+2. Every board's **VCC / +** goes into column A, every board's **GND / −** into column B.
+
+**Signals** (female-female wires, straight from the board to the Pi):
+
+| Board | Pin on board | Pi pin |
+|---|---|---|
+| Screen (OLED) | SDA / SCL | pin 3 / pin 5 |
+| Knob (KY-040) | CLK / DT / SW | pin 11 / pin 13 / pin 15 |
+| TALK button board | S (signal) | pin 29 |
+| MUTE button board | S (signal) | pin 31 |
+| USB headset adapter | — | the Pi's **USB** port (the middle one, not PWR) through the OTG adapter |
+
+Button boards are made two different ways (some give LOW when pressed, some HIGH). The Cube checks
+which kind it has when it starts, so **don't hold a button while plugging the Cube in**.
+
+**Mounting:** stick the two button boards under the TALK and MUTE holes with foam tape, after dropping a
+printed `button_cap.stl` into each hole from inside. The breadboard can be taped to a side wall.
+
+**Optional soldered sound** (built-in mic + speaker instead of a headset):
 
 | Part | Pin on part | Pi pin |
 |---|---|---|
-| OLED (I2C) | VCC / GND / SDA / SCL | 3.3V (pin 1) / GND (6) / GPIO2 (3) / GPIO3 (5) |
-| Encoder | CLK / DT / SW / + / GND | GPIO17 (11) / GPIO27 (13) / GPIO22 (15) / 3.3V / GND |
-| TALK button | one side / other side | GPIO5 (29) / GND |
-| MUTE button | one side / other side | GPIO6 (31) / GND |
-| I2S bus (mic + amp share it) | BCLK / LRCLK (WS) | GPIO18 (12) / GPIO19 (35) |
-| INMP441 mic | SD (data out) / L/R / VDD / GND | GPIO20 (38) / GND / 3.3V / GND |
-| MAX98357A amp | DIN / VIN / GND / SD | GPIO21 (40) / 5V (pin 2) / GND / leave unconnected |
-| USB sound card | — | the Pi's **USB** micro port (not PWR) via OTG adapter |
+| I2S bus (mic + amp share it) | BCLK / LRCLK (WS) | pin 12 / pin 35 |
+| INMP441 mic | SD / L/R / VDD / GND | pin 38 / GND / 3.3V / GND |
+| MAX98357A amp | DIN / VIN / GND / SD | pin 40 / 5V (pin 2) / GND / not connected |
 
-Buttons use the Pi's internal pull-ups (pressed = LOW). Enable I2C and I2S in `/boot/firmware/config.txt`:
+`setup/install.sh` turns on I2C and I2S in `/boot/firmware/config.txt`:
 
 ```
 dtparam=i2c_arm=on
 dtparam=i2s=on
-dtoverlay=googlevoicehat-soundcard   # works for INMP441 + MAX98357A on the pins above
+dtoverlay=googlevoicehat-soundcard   # only used by the soldered mic + amp
 ```
 
-**Done when:** `i2cdetect -y 1` shows the OLED (0x3c), and `arecord -l` / `aplay -l` list both the I2S card
-and the USB card.
+**Done when:** `sudo bash setup/check.sh` says the screen and the USB headset adapter are found.
 
 ---
 
@@ -315,14 +336,15 @@ Menu labels are shortened ("Xbox Broadcast", not "Xbox Server Broadcast") so the
 ## 13. Case (3D print) notes
 
 The printable files are made by `case/make_case.py` (change a measurement at the top and run it again):
-`case/shell.stl`, `case/base.stl`, `case/light_strip.stl`, and `case/preview.png`.
+`case/shell.stl`, `case/base.stl`, `case/light_strip.stl`, `case/button_cap.stl` (print 2), and `case/preview.png`.
 
 - 70 × 70 × 70 mm cube, rounded top and side edges (r = 8 mm), flat bottom. Shell ≈ 62 g, base ≈ 16 g PLA.
 - Base plate slides into the bottom and is held by 4 × M2.5 × 8 screws from below into posts in the corners.
   The Pi sits on 4 posts on the base (M2.5 × 5 screws), its ports facing the back.
 - Front: window for the OLED (30 × 15.5 mm, with a 1 mm bezel and a pocket behind it for the module), knob
   hole (7.4 mm, the encoder's nut holds it), 3 × 3 mic holes bottom right.
-- Top: TALK and MUTE (12.6 mm holes for 12 mm tactile buttons with round caps), slot for the light strip.
+- Top: TALK and MUTE (12.6 mm holes). Print `button_cap.stl` twice: the caps drop in from inside and press
+  the button boards taped underneath. Slot for the light strip.
 - Back: one opening for the Pi's USB port (headset adapter) and power port.
 - Base: ring for the 28 mm speaker with grille holes, 4 feet so the sound gets out.
 - Print shell and base upside down / flat with no supports except the screen pocket (or use "supports on build

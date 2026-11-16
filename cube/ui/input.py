@@ -35,17 +35,27 @@ class Input:
         except asyncio.TimeoutError:
             return None
 
+    @staticmethod
+    def button(pin, **options):
+        """A button that works however it's wired: a plain button to GND, or a 3-pin button board
+        (pressed = LOW or pressed = HIGH). Checked once at start, while nobody is pressing it."""
+        from gpiozero import Button, DigitalInputDevice
+        probe = DigitalInputDevice(pin, pull_up=True)
+        idle_high = probe.pin.state == 1   # a board that pulls the pin down reads LOW here
+        probe.close()
+        return Button(pin, pull_up=idle_high, **options)
+
     def _start_gpio(self):
-        from gpiozero import Button, RotaryEncoder
+        from gpiozero import RotaryEncoder
         self.encoder = RotaryEncoder(17, 27, max_steps=0)
         self.encoder.when_rotated_clockwise = lambda: self._emit("down")
         self.encoder.when_rotated_counter_clockwise = lambda: self._emit("up")
-        self.knob = Button(22, pull_up=True, bounce_time=0.05)
+        self.knob = self.button(22, bounce_time=0.05)
         self.knob.when_pressed = lambda: self._emit("press")
-        self.talk = Button(5, pull_up=True, bounce_time=0.03)
+        self.talk = self.button(5, bounce_time=0.03)
         self.talk.when_pressed = lambda: self._emit("talk_down")
         self.talk.when_released = lambda: self._emit("talk_up")
-        self.mute = Button(6, pull_up=True, bounce_time=0.05, hold_time=1.0)
+        self.mute = self.button(6, bounce_time=0.05, hold_time=1.0)
         self._mute_was_held = False
 
         def held():
