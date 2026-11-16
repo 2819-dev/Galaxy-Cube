@@ -122,14 +122,20 @@ input[type=text], input[type=password] {
   width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2c3667; background: #0b0f22; color: var(--text);
   font: 16px var(--sans); }
 input.code { font: 500 22px var(--mono); letter-spacing: .12em; text-transform: uppercase; text-align: center; }
-.primary { appearance: none; border: 0; border-radius: 12px; padding: 13px; font: 600 16px var(--sans); color: #061019;
-  background: linear-gradient(90deg, var(--cyan), #5aa2f5 55%, var(--violet)); cursor: pointer; }
+.primary { appearance: none; border: 0; border-radius: 10px; padding: 13px; font: 600 16px var(--sans); color: #06202a;
+  background: var(--cyan); cursor: pointer; }
+.primary:active { filter: brightness(.9); }
+.sig { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.bars b { width: 3px; background: var(--line); border-radius: 1px; }
+.bars b.on { background: var(--cyan); }
 .ghost { appearance: none; border: 1px solid var(--line); background: none; color: var(--text); border-radius: 10px;
   padding: 8px 12px; font: 500 13px var(--sans); cursor: pointer; }
 .ghost.danger { color: var(--bad); border-color: #5a2a3a; }
 .msg { border-radius: 10px; padding: 10px 12px; font-size: 14px; }
 .msg.bad { background: #3b1530; color: #ffc1cf; }
 .msg.good { background: #10301f; color: #b6f5cd; }
+.msg.quiet { border: 1px solid var(--line); color: var(--muted); }
 .empty { text-align: center; padding: 26px 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
 .pill { font: 500 11px var(--sans); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
 .pill.on { color: var(--good); border-color: #1e5a39; }
@@ -223,7 +229,7 @@ const scr = { off: false, dim: false, lit: new Uint8Array(W * H), text: "" };
 
 function frame(draw, text) {
   b.fillStyle = "#000"; b.fillRect(0, 0, W, H);
-  b.fillStyle = "#fff"; b.textBaseline = "top"; b.font = FONT;
+  b.fillStyle = "#fff"; b.textBaseline = "alphabetic"; b.font = FONT;
   draw(b);
   const d = b.getImageData(0, 0, W, H).data;
   for (let i = 0; i < W * H; i++) scr.lit[i] = d[i * 4] > 110 ? 1 : 0;
@@ -239,47 +245,76 @@ function paint() {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)
     if (scr.lit[y * W + x]) o.fillRect(x * 4, y * 4, 3.4, 3.4);
 }
+// 7x7 icons: the same ones the real Cube draws (cube/ui/screen.py)
+const ICONS = {
+  wifi: [".#####.", "#.....#", "..###..", ".#...#.", "...#...", "...#...", "......."],
+  nowifi: ["#.....#", ".#...#.", "..#.#..", "...#...", "..#.#..", ".#...#.", "#.....#"],
+  broadcast: ["#.....#", ".#...#.", "#..#..#", "#.###.#", "#..#..#", ".#...#.", "#.....#"],
+  mic: ["..###..", "..###..", "..###..", "#.###.#", "#.....#", ".#####.", "...#..."],
+  muted: ["#.###..", ".####..", "..###..", "#.##..#", "#...#.#", ".####..", "...#..#"],
+  talking: ["..###.#", "..###..", "..###.#", "#.###.#", "#.....#", ".#####.", "...#..."],
+  deafened: ["#.###..", ".#...#.", "#.#..##", "##.#.##", "##..#.#", "......#", "......."],
+  dot: [".......", "..###..", ".#####.", ".#####.", ".#####.", "..###..", "......."],
+  ring: [".......", "..###..", ".#...#.", ".#...#.", ".#...#.", "..###..", "......."],
+};
+function icon(c, name, x, y) {
+  ICONS[name].forEach((row, r) => [...row].forEach((ch, k) => { if (ch === "#") c.fillRect(x + k, y + r, 1, 1); }));
+}
+const wr = (c, x, top, t) => c.fillText(t, x, top + 8);   // text sitting in a 10-pixel row
 const screen = {
   text(lines, title) {
     frame(c => {
-      let y = 1;
-      if (title) { c.fillRect(0, 0, W, ROW + 1); c.fillStyle = "#000"; c.fillText(title, 2, 2); c.fillStyle = "#fff"; y = ROW + 3; }
-      for (const l of lines) { c.fillText(l, 2, y); y += ROW; }
-    }, [title, ...lines].filter(Boolean).join(" · "));
+      let y = 0;
+      if (title) { c.fillRect(0, 0, W, ROW + 1); c.fillStyle = "#000"; wr(c, 2, 1, title); c.fillStyle = "#fff"; y = ROW + 2; }
+      for (const l of lines) {
+        if (Array.isArray(l)) { icon(c, l[0], 2, y + 1); wr(c, 12, y, l[1]); } else wr(c, 2, y, l);
+        y += ROW;
+      }
+    }, [title, ...lines.map(l => Array.isArray(l) ? l[1] : l)].filter(Boolean).join(" · "));
+  },
+  home(name, icons, rows, hint) {
+    frame(c => {
+      wr(c, 2, 0, name);
+      let x = W - 9;
+      for (const i of icons) { icon(c, i, x, 1); x -= 10; }
+      c.fillRect(0, 11, W, 1);
+      rows.forEach(([i, t], k) => { const y = 15 + k * (ROW + 1); icon(c, i, 2, y + 1); wr(c, 12, y, t); });
+      wr(c, W - 2 - c.measureText(hint).width, 54, hint);
+    }, [name, ...rows.map(r => r[1])].join(" · "));
   },
   menu(title, labels, sel) {
     const visible = 5, first = Math.min(Math.max(0, sel - visible + 1), Math.max(0, labels.length - visible));
     frame(c => {
-      c.fillRect(0, 0, W, ROW + 1); c.fillStyle = "#000"; c.fillText(title, 2, 2); c.fillStyle = "#fff";
+      c.fillRect(0, 0, W, ROW + 1); c.fillStyle = "#000"; wr(c, 2, 1, title); c.fillStyle = "#fff";
       labels.slice(first, first + visible).forEach((l, k) => {
         const i = first + k, y = ROW + 3 + k * ROW;
-        if (i === sel) { c.fillRect(0, y - 1, W, ROW); c.fillStyle = "#000"; c.fillText(l, 3, y + 1); c.fillStyle = "#fff"; }
-        else c.fillText(l, 3, y + 1);
+        if (i === sel) { c.fillRect(0, y - 1, W - 3, ROW); c.fillStyle = "#000"; wr(c, 3, y, l); c.fillStyle = "#fff"; }
+        else wr(c, 3, y, l);
       });
-      if (labels.length > visible) {            // scroll bar
-        const h = Math.max(6, 50 * visible / labels.length), top = ROW + 2 + (50 - h) * first / (labels.length - visible);
-        c.fillRect(W - 2, top, 2, h);
+      if (labels.length > visible) {
+        const h = Math.max(6, Math.floor(50 * visible / labels.length)), top = ROW + 2 + Math.floor((50 - h) * first / (labels.length - visible));
+        c.fillRect(W - 2, top, 2, h + 1);
       }
     }, title + ": " + labels[sel]);
   },
   big(code, top, bottom) {
     frame(c => {
-      c.fillText(top, 2, 1);
-      c.font = BIG; const w = c.measureText(code).width; c.fillText(code, (W - w) / 2, 20); c.font = FONT;
-      bottom.forEach((l, i) => c.fillText(l, 2, 44 + i * ROW));
+      wr(c, 2, 1, top);
+      c.font = BIG; const w = c.measureText(code).width; c.fillText(code, Math.floor((W - w) / 2), 37); c.font = FONT;
+      bottom.forEach((l, i) => wr(c, 2, 44 + i * ROW, l));
     }, top + " " + code + " " + bottom.join(" "));
   },
   async boot() {
-    const stars = Array.from({ length: 46 }, () => [Math.random() * 2 - 1, Math.random() * 2 - 1]);
-    for (let s = 1; s <= 9; s++) {
-      frame(c => stars.forEach(([x, y]) => c.fillRect(Math.round(W / 2 + x * s * 8), Math.round(H / 2 + y * s * 4.4), 1, 1)));
+    const stars = Array.from({ length: 40 }, () => [Math.random() * 2 - 1, Math.random() * 2 - 1]);
+    for (let s = 1; s <= 8; s++) {
+      frame(c => stars.forEach(([x, y]) => c.fillRect(Math.round(W / 2 + x * s * 9), Math.round(H / 2 + y * s * 5), 1, 1)));
       await sleep(60);
     }
     frame(c => {
       stars.forEach(([x, y]) => c.fillRect(Math.round(W / 2 + x * 70), Math.round(H / 2 + y * 40), 1, 1));
-      c.fillStyle = "#000"; c.fillRect(14, 22, 100, 20); c.fillStyle = "#fff";
-      c.font = BIG; const w = c.measureText("GALAXY").width; c.fillText("GALAXY", (W - w) / 2, 18);
-      c.font = FONT; const w2 = c.measureText("CUBE").width; c.fillText("CUBE", (W - w2) / 2, 36);
+      c.fillStyle = "#000"; c.fillRect(14, 20, 100, 25); c.fillStyle = "#fff";
+      c.font = BIG; c.fillText("GALAXY", Math.floor((W - c.measureText("GALAXY").width) / 2), 34);
+      c.font = FONT; c.fillText("CUBE", Math.floor((W - c.measureText("CUBE").width) / 2), 43);
     }, "Galaxy Cube");
     await sleep(1100);
   },
@@ -389,7 +424,7 @@ const api = {
 
 // ---------- the Cube program (same flow as cube/main.py) ----------
 const DIM_AFTER = 60e3, TIMEOUTS = [60, 300, 600, 0], HEARTBEAT = 8e3;
-const BACK = "< BACK", CLOSE = "close";
+const BACK = "< Back", CLOSE = "close";
 let lastInput = Date.now(), keepAwake = false, heartbeatTimer = null;
 
 async function nextEvent(ms) {
@@ -544,11 +579,22 @@ function startHeartbeat() {
 function stopHeartbeat() { clearInterval(heartbeatTimer); heartbeatTimer = null; }
 
 const user = () => (S.me && S.me.user && S.me.user.username) || "-";
+function voiceLine() {
+  if (!live.voiceJoined) return ["ring", "Voice off"];
+  if (live.deafened) return ["deafened", "Deafened"];
+  if (live.muted) return ["muted", "Mic off"];
+  if (live.talking) return ["talking", "Talking"];
+  const where = S.voice.group || "Nearby", hint = S.voice.mode === "Push-to-talk" ? "hold TALK" : "open mic";
+  return ["mic", (where + " - " + hint).slice(0, 20)];
+}
 function drawHome() {
   const status = live.online === null ? "Checking..." : live.online ? "Online" : "Offline";
-  let voice = "Voice: off";
-  if (live.voiceJoined) voice = "Voice: " + (live.deafened ? "Deafened" : live.muted ? "Muted" : live.talking ? "TALKING" : (S.voice.group || "On"));
-  screen.text([("Account: " + user()).slice(0, 21), "Broadcast: " + (S.settings.broadcast ? "ON *" : "off"), voice, "Status: " + status, "Press for menu"], "GALAXY CUBE");
+  const icons = ["wifi"]; if (S.settings.broadcast) icons.push("broadcast");
+  screen.home(user().slice(0, 16), icons, [
+    S.settings.broadcast ? ["broadcast", "Broadcasting"] : ["ring", "Broadcast off"],
+    voiceLine(),
+    [live.online ? "dot" : "ring", status],
+  ], "MENU >");
 }
 async function home() {
   for (;;) {
@@ -593,27 +639,35 @@ function settingsMenu() {
   ]];
 }
 
-// Voice chat (spec §8): a preview, with pretend players.
-const GROUPS = ["Builders", "Bedwars squad", "Staff room"];
+// Voice chat (spec §8), with pretend players. Same menu as cube/main.py.
+const GROUPS = [{ name: "Builders" }, { name: "Bedwars squad" }, { name: "Secret base", locked: true }];
+const VOLUMES = [20, 40, 60, 80, 100];
 function voiceMenu() {
   const items = [item(live.voiceJoined ? "Leave voice" : "Join voice", async () => {
     if (live.voiceJoined) leaveVoice(); else { live.voiceJoined = true; showTab("voice"); }
     refresh(); return CLOSE;
-  })];
-  items.push(item("Mode: " + (S.voice.mode === "Push-to-talk" ? "Push-to-talk" : "Open mic"), async () => {
+  }), item("Mode: " + S.voice.mode, async () => {
     S.voice.mode = S.voice.mode === "Push-to-talk" ? "Open mic" : "Push-to-talk"; save(); refresh();
-  }));
-  items.push(sub("Groups", () => ["Groups", [
-    ...GROUPS.map(g => item((S.voice.group === g ? "* " : "") + g, async () => { S.voice.group = g; save(); refresh(); return CLOSE; })),
-    ...(S.voice.group ? [item("Leave group", async () => { S.voice.group = null; save(); refresh(); })] : [])]]));
-  items.push(item("Audio: " + S.voice.audio, async () => { const o = ["Auto", "Headset", "Speaker"]; S.voice.audio = o[(o.indexOf(S.voice.audio) + 1) % 3]; save(); }));
-  items.push(item("Volume: " + S.voice.volume + "%", async () => { S.voice.volume = S.voice.volume >= 100 ? 20 : S.voice.volume + 20; save(); }));
+    if (S.voice.mode === "Open mic" && S.voice.audio !== "Headset") await info("Open mic", ["With the built-in", "speaker others may", "hear an echo.", "A headset is best."]);
+  })];
+  if (live.voiceJoined) {
+    items.push(sub(("Group: " + (S.voice.group || "none")).slice(0, 21), () => ["Groups", [
+      ...(S.voice.group ? [item("Leave group", async () => { S.voice.group = null; save(); refresh(); })] : []),
+      ...GROUPS.filter(g => g.name !== S.voice.group).map(g => item(g.name + (g.locked ? " (L)" : ""), async () => {
+        if (g.locked) { await info(g.name, ["This group has a", "password. Ask its", "owner to invite you", "on galaxymc.us."]); return null; }
+        S.voice.group = g.name; save(); refresh(); return CLOSE;
+      }))]]));
+    items.push(item("Who's here", () => info("Who's here", PLAYERS.filter(p => !S.voice.group || p.g === S.voice.group)
+      .map((p, i) => (p.n + " " + (S.voice.group ? "" : (8 + i * 9) + " blocks")).slice(0, 21)).slice(0, 4))));
+  }
+  items.push(item("Audio: " + S.voice.audio, async () => { const o = ["Auto", "Headset", "Speaker"]; S.voice.audio = o[(o.indexOf(S.voice.audio) + 1) % 3]; save(); refresh(); }));
+  items.push(item("Volume: " + S.voice.volume + "%", async () => { S.voice.volume = VOLUMES[(VOLUMES.indexOf(S.voice.volume) + 1) % VOLUMES.length] || 80; save(); refresh(); }));
   return ["Voice Chat", items];
 }
 function leaveVoice() { live.voiceJoined = live.talking = live.muted = live.deafened = false; }
 function voiceButton(ev) {
   if (!live.voiceJoined) { live.talking = false; return; }
-  if (ev === "talk_down" && !live.muted && !live.deafened) live.talking = true;
+  if (ev === "talk_down" && !live.muted && !live.deafened && S.voice.mode === "Push-to-talk") live.talking = true;
   if (ev === "talk_up") live.talking = false;
   if (ev === "mute") { live.muted = !live.muted; if (live.muted) live.talking = false; }
   if (ev === "mute_long") { live.deafened = !live.deafened; if (live.deafened) live.talking = false; }
@@ -627,6 +681,9 @@ const NETWORKS = [
   { ssid: "Guest", signal: 30, secure: false },
 ];
 const pane = document.getElementById("pane");
+const LOCK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-label="Password"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+const bars = sig => { const on = 1 + Math.min(3, Math.floor(sig / 25)); return '<span class="bars">' + [0, 1, 2, 3].map(i => `<b class="${i < on ? "on" : ""}" style="height:${3 + i * 3}px"></b>`).join("") + "</span>"; };
+const netMeta = n => `<span class="sig">${n.secure ? LOCK : ""}${bars(n.signal)}</span>`;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 function showTab(t) { if (live.tab !== t) live.unseen.add(t); live.tab = t; renderTabs(); }
@@ -658,15 +715,15 @@ function phonePane() {
   if (!live.portal) {
     return `<h2>Wi-Fi networks</h2><p>Join the Cube's own Wi-Fi to open its setup page.</p>
       <div class="list">
-        <button class="row" data-act="join-cube"><span><b>${esc(S.deviceId)}</b></span><span class="meta">🔒 galaxycube · Join</span></button>
-        ${NETWORKS.map(n => `<div class="row"><span>${esc(n.ssid)}</span><span class="meta">${n.secure ? "🔒 " : ""}${n.signal}%</span></div>`).join("")}
+        <button class="row sel" data-act="join-cube"><span><b>${esc(S.deviceId)}</b><br><span class="meta">Password: galaxycube</span></span><span class="meta">Join ›</span></button>
+        ${NETWORKS.map(n => `<div class="row"><span>${esc(n.ssid)}</span>${netMeta(n)}</div>`).join("")}
       </div>`;
   }
-  return `<div class="where">http://10.42.0.1 · Galaxy Cube setup</div>
-    <h2>Pick your home Wi-Fi</h2><p>Your console must use the same Wi-Fi.</p>
+  return `<div class="where">10.42.0.1 · the Cube's setup page</div>
+    <h2>Connect to Wi-Fi</h2><p>Pick your home Wi-Fi. Your console has to be on the same one.</p>
     ${live.portalError ? `<div class="msg bad">${esc(live.portalError)}</div>` : ""}
     <div class="list">${NETWORKS.map((n, i) => `<button class="row${(live.portal.pick ?? 0) === i ? " sel" : ""}" data-act="pick" data-i="${i}">
-      <span>${(live.portal.pick ?? 0) === i ? "◉" : "○"} ${esc(n.ssid)}</span><span class="meta">${n.secure ? "🔒 " : ""}${n.signal}%</span></button>`).join("")}</div>
+      <span>${(live.portal.pick ?? 0) === i ? "◉" : "○"} ${esc(n.ssid)}</span>${netMeta(n)}</button>`).join("")}</div>
     <div class="field"><label for="wifi-pw">Password</label><input type="password" id="wifi-pw" autocomplete="off" placeholder="Wi-Fi password (any 8+ letters)"></div>
     <button class="primary" data-act="connect">Connect</button>
     <p style="font-size:13px">Tip: type <b>wrong</b> as the password to see what happens with a mistake.</p>`;
@@ -677,7 +734,7 @@ function sitePane() {
   return `<div class="where">galaxymc.us/cube (pretend)</div>
     <h2>Link a Cube</h2>
     <p>Signed in as <b>${esc(S.site.username)}</b>. Type the code from the Cube's screen.</p>
-    ${live.pairCode ? "" : `<div class="msg good" style="background:#121a38;color:var(--muted)">No Cube is showing a code right now.</div>`}
+    ${live.pairCode ? "" : `<div class="msg quiet">No Cube is showing a code right now.</div>`}
     <div class="field"><label for="code">Code</label><input type="text" id="code" class="code" maxlength="7" placeholder="K7Q-29M" autocomplete="off" autocapitalize="characters"></div>
     <div id="code-msg"></div>
     <button class="primary" data-act="link">Link Cube</button>
@@ -701,7 +758,7 @@ function consolePane() {
       <button class="ghost" data-act="leave-game">Leave game</button>`;
   }
   return `<h2>Console</h2><p>Play → Friends → LAN Games</p>
-    <div class="list"><button class="row" data-act="join-game"><span class="who"><span class="av" style="background:linear-gradient(135deg,var(--cyan),var(--violet))">GS</span>
+    <div class="list"><button class="row" data-act="join-game"><span class="who"><span class="av" style="background:var(--cyan)">GS</span>
       <span><b>GalaxySMP</b><br><span class="meta">LAN game · found through the Cube</span></span></span><span class="meta">Join ›</span></button></div>`;
 }
 
