@@ -3,7 +3,8 @@
 Events: "up", "down", "press" (knob), "talk_down", "talk_up", "mute", "mute_long".
 Fake mode reads the keyboard instead. Type a letter and press Enter:
   u / d  = turn the knob up / down (uuu = three steps)   Enter or p = press the knob
-  t      = hold TALK then release     m = MUTE     M = long-press MUTE     q = quit
+  t      = tap TALK    h = hold TALK down / let go (type h again)
+  m      = MUTE        M = long-press MUTE (deafen)     q = quit
 """
 import asyncio
 import sys
@@ -72,6 +73,9 @@ class Input:
             if not line:
                 self.queue.put_nowait("press")
             for ch in line:
+                if ch == "h":
+                    self.talk_held = not self.talk_held
+                    self.queue.put_nowait("talk_down" if self.talk_held else "talk_up")
                 for event in FAKE_KEYS.get(ch, []):
                     self.queue.put_nowait(event)
 

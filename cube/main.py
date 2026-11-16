@@ -11,11 +11,13 @@ from .net.portal import Portal
 from .ui.input import Input
 from .ui.menu import CLOSE, Item, confirm, info, run_menu
 from .ui.screen import Screen
+from .voice.client import Voice, VoiceError
 
 log = config.log
 DIM_AFTER = 60
 CONSOLES = {"Xbox": "Xbox", "Nintendo": "Switch", "PlayStation": "PlayStation"}
 TIMEOUTS = [60, 300, 600, 0]
+VOLUMES = [20, 40, 60, 80, 100]
 
 
 class Quit(Exception):
@@ -29,6 +31,7 @@ class App:
         self.screen.set_brightness(self.settings["brightness"])
         self.api = Api()
         self.broadcast = Broadcast()
+        self.voice = Voice(self.settings, on_change=self.poke)
         self.input = None
         self.me = self.settings.get("me")
         self.online = None   # None = still checking
@@ -37,6 +40,11 @@ class App:
         self.last_input = 0
 
     # ---------- events, screen sleep ----------
+
+    def poke(self):
+        """Something changed (voice, website): redraw the screen soon."""
+        if self.input and self.input.queue.qsize() < 3:
+            self.input.queue.put_nowait("redraw")
 
     async def next_event(self, timeout=None):
         """Wait for the knob (or `timeout` seconds -> None). Also dims / turns off the screen when idle."""
@@ -53,9 +61,15 @@ class App:
                 continue
             if event == "quit":
                 raise Quit()
+            if event == "redraw":
+                return event
             self.last_input = now
             if event in ("talk_down", "talk_up", "mute", "mute_long"):
-                continue  # voice chat buttons: handled once voice chat is added (spec §8)
+                self.voice.button(event)   # TALK / MUTE work even with the screen off
+                if event != "talk_up":
+                    self.save()
+                self.screen.on()
+                return "redraw"
             if self.screen.is_off or self.screen.is_dim:
                 was_off = self.screen.is_off
                 self.screen.on()
@@ -102,6 +116,7 @@ class App:
                     tasks.create_task(self.home())
             except* Unlinked:
                 log.info("This Cube was unlinked")
+                await self.voice.leave()
                 self.api.set_token(None)
                 self.broadcast.stop()
                 self.me = self.settings["me"] = None
@@ -232,21 +247,44 @@ class App:
 
     # ---------- home screen + menus (spec §9) ----------
 
+    def user(self):
+        return ((self.me or {}).get("user") or {}).get("username") or "-"
+
+    def voice_line(self):
+        """(icon, text) for the voice row on the home screen."""
+        v = self.voice
+        if not v.joined:
+            return "ring", "Voice off"
+        if v.status != "on":
+            return "ring", {"connecting": "Joining voice..."}.get(v.status, v.status)[:19]
+        if v.voice_muted():
+            return "muted", "Muted by staff"
+        if v.deafened:
+            return "deafened", "Deafened"
+        if not v.mic_on:
+            return "muted", "Mic off"
+        group = v.my_group()
+        where = group["name"] if group else "Nearby"
+        if v.talking:
+            return "talking", "Talking"[:19]
+        hint = "hold TALK" if v.ptt else "open mic"
+        return "mic", f"{where} - {hint}"[:20]
+
     def draw_home(self):
-        user = ((self.me or {}).get("user") or {}).get("username") or "-"
         if self.online is None:
             status = "Checking..."
         elif self.online:
             status = "Online"
         else:
             status = "No Wi-Fi" if not self.has_wifi else "Offline"
-        self.screen.text([
-            f"Account: {user}"[:21],
-            "Broadcast: " + ("ON  *" if self.broadcast.on else "off"),
-            "Voice: next update",
-            f"Status: {status}",
-            "Press for menu",
-        ], title="GALAXY CUBE")
+        icons = ["wifi" if self.has_wifi else "nowifi"]
+        if self.broadcast.on:
+            icons.append("broadcast")
+        self.screen.home(self.user()[:16], icons, [
+            ("broadcast" if self.broadcast.on else "ring", "Broadcasting" if self.broadcast.on else "Broadcast off"),
+            self.voice_line(),
+            ("dot" if self.online else "ring", status),
+        ], "MENU >")
 
     async def home(self):
         while True:
@@ -260,7 +298,7 @@ class App:
         if self.broadcast.on:
             items.append(Item("Stop Broadcast", self.stop_broadcast))
         items += [
-            Item("Voice Chat", lambda: info(self, "Voice Chat", ["Voice chat is coming", "in the next update."])),
+            Item("Voice Chat", submenu=self.voice_menu),
             Item("Account", submenu=self.account_menu),
             Item("Settings", submenu=self.settings_menu),
         ]
@@ -284,8 +322,103 @@ class App:
         self.save()
         return CLOSE
 
+    # ---------- voice chat (spec §8) ----------
+
+    def voice_menu(self):
+        v = self.voice
+        items = [Item("Leave voice" if v.joined else "Join voice", self.toggle_voice),
+                 Item(f"Mode: {self.settings.get('voice_mode', 'Push-to-talk')}", self.next_voice_mode)]
+        if v.connected:
+            group = v.my_group()
+            items.append(Item(f"Group: {group['name'] if group else 'none'}"[:21], submenu=self.groups_menu))
+            if v.me().get("canGlobal"):
+                items.append(Item("Global Mic: " + ("On" if v.me().get("global") else "Off"), self.toggle_global))
+            items.append(Item("Who's here", self.who))
+        items += [Item(f"Audio: {self.settings.get('voice_audio', 'Auto')}", self.next_audio),
+                  Item(f"Volume: {self.settings.get('voice_volume', 80)}%", self.next_volume)]
+        return "Voice Chat", items
+
+    async def toggle_voice(self):
+        if self.voice.joined:
+            await self.voice.leave()
+            return CLOSE
+        voice = (self.me or {}).get("voice") or {}
+        if not voice.get("url") or not self.api.token:
+            await info(self, "Voice Chat", ["Can't reach", "galaxymc.us yet.", "Try again soon."])
+            return None
+        self.voice.join(voice["url"], self.api.token)
+        return CLOSE
+
+    async def next_voice_mode(self):
+        mode = self.settings.get("voice_mode", "Push-to-talk")
+        self.settings["voice_mode"] = "Open mic" if mode == "Push-to-talk" else "Push-to-talk"
+        self.save()
+        if self.settings["voice_mode"] == "Open mic" and self.voice.audio.kind == "speaker":
+            await info(self, "Open mic", ["With the built-in", "speaker others may", "hear an echo.", "A headset is best."])
+
+    async def next_audio(self):
+        order = ["Auto", "Headset", "Speaker"]
+        current = self.settings.get("voice_audio", "Auto")
+        self.settings["voice_audio"] = order[(order.index(current) + 1) % 3] if current in order else "Auto"
+        self.save()
+        if self.voice.joined:  # switch the sound over by reconnecting
+            await self.voice.leave()
+            await self.toggle_voice()
+
+    async def next_volume(self):
+        current = self.settings.get("voice_volume", 80)
+        index = VOLUMES.index(current) if current in VOLUMES else 3
+        self.voice.set_volume(VOLUMES[(index + 1) % len(VOLUMES)])
+        self.save()
+
+    async def voice_request(self, coro):
+        try:
+            await coro
+            return True
+        except VoiceError as e:
+            await info(self, "Voice Chat", [str(e)[i:i + 21] for i in range(0, min(len(str(e)), 84), 21)])
+            return False
+
+    def groups_menu(self):
+        v = self.voice
+        mine = v.my_group()
+        items = []
+        if mine:
+            items.append(Item("Leave group", lambda: self.voice_request(v.leave_group())))
+        for g in v.groups:
+            if mine and g["id"] == mine["id"]:
+                continue
+            label = g["name"][:17] + (" (L)" if g.get("locked") else "")
+            items.append(Item(label, lambda g=g: self.join_group(g)))
+        if not v.groups:
+            items.append(Item("No groups yet", lambda: info(self, "Groups", [
+                "Make groups on", "galaxymc.us/voice", "then join them here."])))
+        return "Groups", items
+
+    async def join_group(self, group):
+        invited = any(m.get("id") == self.voice.my_id for m in group.get("members", []))
+        if group.get("locked") and not invited:
+            await info(self, group["name"][:21], ["This group has a", "password. Ask its", "owner to invite you", "on galaxymc.us."])
+            return None
+        if await self.voice_request(self.voice.join_group(group["id"])):
+            return CLOSE
+
+    async def toggle_global(self):
+        await self.voice_request(self.voice.set_global(not self.voice.me().get("global")))
+
+    async def who(self):
+        v = self.voice
+        rows = []
+        for u in v.users.values():
+            if u["id"] == v.my_id:
+                continue
+            d = v.distance(u["id"])
+            where = "talking" if u.get("talking") else (f"{round(d)} blocks" if d is not None else "-")
+            rows.append(f"{u['username'][:13]} {where}"[:21])
+        await info(self, "Who's here", rows[:4] or ["Nobody else yet."])
+
     def account_menu(self):
-        user = ((self.me or {}).get("user") or {}).get("username") or "-"
+        user = self.user()
         return "Account", [
             Item(f"Linked to {user}"[:21], lambda: info(self, "Account", [
                 f"Linked to {user}"[:21], "Rename or unlink at", "galaxymc.us/cube"])),
@@ -339,6 +472,7 @@ def main():
             await app.run()
         finally:
             app.broadcast.stop()
+            await app.voice.leave()
             await app.api.close()
 
     try:

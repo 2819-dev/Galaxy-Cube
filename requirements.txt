@@ -2,3 +2,6 @@ aiohttp>=3.9
 luma.oled>=3.12
 qrcode>=7.4
 Pillow>=10
+numpy>=1.24
+aiortc>=1.9
+sounddevice>=0.4

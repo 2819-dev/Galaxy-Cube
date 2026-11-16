@@ -9,7 +9,7 @@ echo "== Galaxy Cube install (repo: $DIR) =="
 echo "-- System packages"
 apt-get update
 apt-get install -y python3-venv python3-pip python3-gpiozero python3-lgpio python3-pil python3-numpy \
-  libopenjp2-7 i2c-tools git curl
+  libopenjp2-7 libportaudio2 alsa-utils i2c-tools git curl
 
 echo "-- Python packages"
 mkdir -p /opt/galaxy-cube
@@ -44,3 +44,4 @@ systemctl enable galaxy-cube.service
 echo
 echo "Done! Restart the Cube with:  sudo reboot"
 echo "After that, the screen should show Galaxy Cube."
+echo "Check the hardware any time with:  sudo bash setup/check.sh"
