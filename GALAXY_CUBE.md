@@ -21,18 +21,17 @@ on galaxymc.us; this repo is only the Cube itself.
                                               └── internet ──► galaxymc.us (pairing, voice chat)
 ```
 
-**Console joining (“Server Broadcast”).** Consoles can't add custom servers, but they *do* show **LAN games**
-under *Play → Friends → LAN Games*. Minecraft finds LAN games by broadcasting a small UDP "ping" on port
-**19132**. The Cube answers that ping with GalaxySMP's name, so GalaxySMP appears in the LAN list. When the
-player taps it, the console connects to the Cube, and the Cube relays every UDP packet to the real server and
-back. To the server it looks like a normal player. Works on every console, with no settings to change on the
-console. (This is the same idea as the open-source project **Phantom** — see §5.)
+**Console joining (“Server Broadcast”).** Consoles can't type a custom server address. The Cube runs a local
+**BedrockConnect** server-list (NetherNet, Minecraft **26.60+**). On Xbox / PlayStation it shows up under
+*Play → Friends → Worlds / LAN*; on Switch you point the console DNS at the Cube and open a featured server.
+Either way you get a short list with **GalaxySMP** and tap it to transfer to the real server. (Older RakNet
+LAN relays like **Phantom** do not work on 26.60 — see §5.)
 
 **Voice chat.** The Cube signs in to galaxymc.us as its owner (after pairing), opens the voice WebSocket and
 sends/receives audio over WebRTC, exactly like the website's voice page does. Proximity works automatically:
 the server knows where the owner's Minecraft player is.
 
-**Both run at the same time** — the broadcast is a background service; voice is controlled with the two buttons.
+**Both run at the same time** — the broadcast is a background Java process; voice is controlled with the two buttons.
 
 ---
 
@@ -94,7 +93,10 @@ and the USB card.
 - Python packages: `luma.oled` (screen), `gpiozero` (knob + buttons), `aiohttp` (HTTP + WebSocket),
   `aiortc` (WebRTC), `sounddevice` + `numpy` (audio), `qrcode` (optional, QR for pairing).
 - **NetworkManager** (`nmcli`) for Wi-Fi and the setup hotspot (default on Bookworm).
-- Broadcast engine: **Phantom** binary (MIT license) — `phantom-linux-arm8` from github.com/jhead/phantom releases.
+- Broadcast engine: **BedrockConnect** 1.72+ (GPL-3.0) — Java jar from
+  github.com/Pugmatt/BedrockConnect releases. Needs **Java 17**.
+  *(Phantom is RakNet-only and does **not** work with Minecraft Bedrock **26.60**, which moved
+  clients to NetherNet. Do not ship Phantom.)*
 
 Repo layout:
 
@@ -110,38 +112,49 @@ galaxy-cube/
     net/wifi.py           ← nmcli helpers, setup hotspot
     net/portal.py         ← captive setup web page (aiohttp)
     api.py                ← galaxymc.us API (pairing, /me)
-    broadcast.py          ← starts/stops Phantom, status
+    broadcast.py          ← starts/stops BedrockConnect, status
     voice/client.py       ← voice WebSocket + WebRTC (aiortc)
     voice/audio.py        ← picks headset / built-in, mixing, volume
   systemd/galaxy-cube.service
-  setup/install.sh        ← installs packages, Phantom, service
+  setup/install.sh        ← installs packages, BedrockConnect, service
   case/                   ← STL / 3MF files for the body
 ```
 
-One process (`main.py`) with asyncio tasks is simplest; Phantom runs as a child process.
+One process (`main.py`) with asyncio tasks is simplest; BedrockConnect runs as a Java child process.
 
 ---
 
 ## 5. Server Broadcast (console joining)
 
-**Use Phantom** rather than writing a RakNet relay from scratch:
+**Use BedrockConnect 1.72+** (NetherNet). Phantom will not work on Minecraft 26.60+.
 
 ```
-./phantom-linux-arm8 -server galaxymc.smp.live:9030 -bind 0.0.0.0 -bind_port 19132
+java -Xms64M -Xmx192M -jar BedrockConnect-1.0-SNAPSHOT.jar
 ```
+
+With `config.yml` in the working directory:
+
+- `net_mode: nethernet`
+- `custom_servers: <path>` → JSON list with GalaxySMP (`server.host` / `server.port` from `GET /api/cube/me`)
+- `user_servers: false`, `featured_servers: false`
+- `stun_discovery: false` (LAN-only on the Pi; keeps RAM/CPU down)
 
 - Get host/port from `GET /api/cube/me` → `server.host`, `server.port` (don't hard-code; the owner may move servers).
-- Phantom answers LAN pings with the real server's name and player count, and relays traffic.
-- Start it when the user selects **Xbox / Switch / PlayStation Server Broadcast**; stop it when they select
+- Start BedrockConnect when the user selects **Xbox / Switch / PlayStation Server Broadcast**; stop it on
   "Stop broadcast". Restart it automatically if it exits. Show "Broadcasting" + a dot on the home screen.
-- All three menu items start the same broadcast (it works for every console); they exist so players know
-  it's for them, and each shows short console-specific join instructions on the screen:
-  - Xbox / Switch / PlayStation: *Minecraft → Play → Friends → LAN Games → GalaxySMP*.
-- Firewall: allow UDP 19132 and 19133 in, and UDP out.
+- All three menu items start the same broadcast; each shows short console-specific join instructions:
+  - **Xbox / PlayStation:** *Minecraft → Play → Friends → Worlds / LAN → BedrockConnect → GalaxySMP*
+    (same Wi-Fi as the Cube; no DNS change).
+  - **Nintendo Switch:** set the console's **primary DNS to the Cube's IP** (shown on the Cube screen),
+    secondary `8.8.8.8`, then *Servers → any featured server → GalaxySMP*. (While broadcasting, the Cube
+    can run dnsmasq that redirects featured-server names to itself — same idea as public BedrockConnect DNS.)
+- Firewall: allow **UDP and TCP 19132** in (NetherNet needs TCP too), and UDP out.
 - The console must be on the **same Wi-Fi** as the Cube (some routers block broadcasts on "guest" networks —
   show a hint in the manual).
+- Pi Zero 2 W RAM is tight (512 MB): keep the Java heap ≤ 192M.
 
-**Done when:** an Xbox or Switch on the same Wi-Fi sees "GalaxySMP" under LAN Games and can play.
+**Done when:** an Xbox, Switch or PlayStation on the same Wi-Fi can open BedrockConnect and join GalaxySMP
+on Minecraft 26.60+.
 
 ---
 
@@ -271,7 +284,7 @@ Screen dims after 60 s idle and turns off after 5 min (OLEDs burn in); any input
 
 - systemd service `galaxy-cube.service` (`Restart=always`), starts after `network-online.target`.
 - Read-only root or at least `fsck` safe: write only token + settings to `/var/lib/galaxy-cube/`.
-- Reconnect voice WebSocket with backoff (1 s → 30 s). Restart Phantom if it exits.
+- Reconnect voice WebSocket with backoff (1 s → 30 s). Restart BedrockConnect if it exits.
 - Updates: `setup/update.sh` does `git pull` + restart; later, a menu item "Check for updates".
 - Never log the device token.
 
@@ -312,7 +325,9 @@ Screen dims after 60 s idle and turns off after 5 min (OLEDs burn in); any input
 1. Plug in the Cube. The screen says **Galaxy Cube**.
 2. On your phone, join the Wi-Fi **CUBE-XXXX** shown on the screen. A page opens: pick your home Wi-Fi.
 3. The Cube shows a code. Go to **cube.galaxymc.us**, sign in, and type the code.
-4. Turn the knob to your console's **Server Broadcast** and press it. In Minecraft: **Play → Friends → LAN Games → GalaxySMP**.
+4. Turn the knob to your console's **Server Broadcast** and press it.
+   - **Xbox / PlayStation:** Minecraft → Play → Friends → Worlds / LAN → **BedrockConnect** → **GalaxySMP**.
+   - **Switch:** set the console DNS to the Cube's IP (on the Cube screen), then Servers → a featured server → **GalaxySMP**.
 5. Voice chat: plug in a headset (or use the built-in mic and speaker), choose **Voice Chat → Join**, hold **TALK** to speak.
 
 Your console and the Cube must be on the same Wi-Fi.

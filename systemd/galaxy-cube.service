@@ -1,0 +1,20 @@
+[Unit]
+Description=Galaxy Cube (console join + voice chat)
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/galaxy-cube
+ExecStart=/usr/bin/python3 -m cube.main
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+# State (token, settings) lives here — never log the token.
+Environment=GALAXY_CUBE_STATE=/var/lib/galaxy-cube
+Environment=GALAXY_CUBE_HOME=/opt/galaxy-cube
+Environment=GALAXY_CUBE_BC_DIR=/opt/galaxy-cube/bedrock-connect
+Environment=GALAXY_CUBE_BC_JAR=/opt/galaxy-cube/bedrock-connect/BedrockConnect-1.0-SNAPSHOT.jar
+
+[Install]
+WantedBy=multi-user.target
